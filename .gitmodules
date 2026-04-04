@@ -1,0 +1,6 @@
+[submodule "altivec"]
+	path = altivec
+	url = git@github.com:jeffreybergier/AltivecIntelligence.git
+[submodule "vienna"]
+	path = vienna
+	url = git@github.com:ViennaRSS/vienna-rss.git

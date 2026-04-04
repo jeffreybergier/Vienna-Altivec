@@ -1,0 +1,45 @@
+# AltivecIntelligence: Parent Project Setup
+# Use this file to "activate" the Altivec toolchain in your new repository.
+#
+# 1. Add Altivec as a submodule:
+#    git submodule add https://github.com/jeffreybergier/AltivecIntelligence.git altivec
+#
+# 2. Copy this file to your project root:
+#    cp altivec/altivec_compose.yml ./compose.yml
+#
+# 3. Build docker images (one time):
+#    docker compose build
+#
+# 4. Build an example app from the Altivec submodule:
+#    docker compose run --rm altivec "cd /repo/altivec/apps/SingleWindow && make"
+#
+# 5a. Use with Gemini CLI (AI Assistant):
+#    docker compose run --rm altivec-intelligence
+#
+# 5b. Use with standard shell (no AI):
+#    docker compose run --rm altivec
+#
+
+services:
+  altivec-intelligence:
+    extends:
+      file: ./altivec/compose.yml
+      service: altivec-intelligence
+    volumes:
+      - .:/repo/user
+      - ~/.ssh/authorized_keys:/root/.ssh/authorized_keys:ro
+      - ~/.ssh/config:/root/.ssh/config:ro
+      - ~/.ssh/id_rsa:/root/.ssh/id_rsa:ro
+      - ~/.ssh/id_rsa.pub:/root/.ssh/id_rsa.pub:ro
+      - ~/.ssh/known_hosts:/root/.ssh/known_hosts
+      - ~/.ssh/known_hosts.old:/root/.ssh/known_hosts.old
+
+    working_dir: /repo/user
+
+  altivec:
+    extends:
+      file: ./altivec/compose.yml
+      service: altivec
+    volumes:
+      - .:/repo/user
+    working_dir: /repo/user
