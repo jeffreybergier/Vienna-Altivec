@@ -1,0 +1,27 @@
+--- vienna/HelperFunctions.m	2026-04-05 01:00:36.000000000 +0000
++++ build-debug/HelperFunctions.m.mod	2026-04-05 10:20:00.000000000 +0000
+@@ -71,7 +71,8 @@
+ 	for (index = 0; index < count; ++index)
+ 	{
+ 		NSMenu * subMenu = [[arrayOfMenus objectAtIndex:index] submenu];
+-		int itemIndex = [subMenu indexOfItemWithTarget:[NSApp delegate] andAction:theSelector];
++		int itemIndex = [subMenu indexOfItemWithTarget:nil andAction:theSelector];
++        NSLog(@"[HelperFunctions.m] Searching for action: %@, found index: %d", NSStringFromSelector(theSelector), (int)itemIndex);
+ 		if (itemIndex >= 0)
+ 			return [subMenu itemAtIndex:itemIndex];
+ 	}
+@@ -84,8 +85,12 @@
+  */
+ NSMenuItem * copyOfMenuWithAction(SEL theSelector)
+ {
+-	NSMenuItem * item = menuWithAction(theSelector);
+-	return (item) ? [[[NSMenuItem alloc] initWithTitle:[item title] action:theSelector keyEquivalent:@""] autorelease] : nil;
++    NSMenuItem * item = menuWithAction(theSelector);
++    if (item != nil)
++        return [[[NSMenuItem alloc] initWithTitle:[item title] action:theSelector keyEquivalent:@""] autorelease];
++    
++    NSLog(@"[HelperFunctions.m] WARNING: Returning dummy menu item for missing action: %@", NSStringFromSelector(theSelector));
++    return [[[NSMenuItem alloc] initWithTitle:NSStringFromSelector(theSelector) action:theSelector keyEquivalent:@""] autorelease];
+ }
+ 
+ /* menuWithTitleAndAction

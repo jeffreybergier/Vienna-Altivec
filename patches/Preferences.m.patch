@@ -1,0 +1,4 @@
+--- vienna/Preferences.m
++++ vienna/Preferences.m
+@@ -24,1 +24,0 @@
+-#import <Sparkle/Sparkle.h>

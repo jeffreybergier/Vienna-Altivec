@@ -1,0 +1,37 @@
+--- build-debug/Constants.h.orig	2026-04-05 01:02:01.033270399 +0000
++++ build-debug/Constants.h.mod	2026-04-05 01:02:01.036246384 +0000
+@@ -111,20 +111,20 @@
+ #define MA_ViewTag_Filterbar			1
+ #define MA_ViewTag_Statusbar			2
+ 
+-const AEKeyword EditDataItemAppleEventClass;
+-const AEKeyword EditDataItemAppleEventID;
+-const AEKeyword DataItemTitle;
+-const AEKeyword DataItemDescription;
+-const AEKeyword DataItemSummary;
+-const AEKeyword DataItemLink;
+-const AEKeyword DataItemPermalink;
+-const AEKeyword DataItemSubject;
+-const AEKeyword DataItemCreator;
+-const AEKeyword DataItemCommentsURL;
+-const AEKeyword DataItemGUID;
+-const AEKeyword DataItemSourceName;
+-const AEKeyword DataItemSourceHomeURL;
+-const AEKeyword DataItemSourceFeedURL;
++extern const AEKeyword EditDataItemAppleEventClass;
++extern const AEKeyword EditDataItemAppleEventID;
++extern const AEKeyword DataItemTitle;
++extern const AEKeyword DataItemDescription;
++extern const AEKeyword DataItemSummary;
++extern const AEKeyword DataItemLink;
++extern const AEKeyword DataItemPermalink;
++extern const AEKeyword DataItemSubject;
++extern const AEKeyword DataItemCreator;
++extern const AEKeyword DataItemCommentsURL;
++extern const AEKeyword DataItemGUID;
++extern const AEKeyword DataItemSourceName;
++extern const AEKeyword DataItemSourceHomeURL;
++extern const AEKeyword DataItemSourceFeedURL;
+ 
+ // Layout styles
+ #define MA_Layout_Report				1

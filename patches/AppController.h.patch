@@ -1,0 +1,4 @@
+--- vienna/AppController.h
++++ vienna/AppController.h
+@@ -25,1 +25,0 @@
+-#import <Growl/GrowlApplicationBridge.h>

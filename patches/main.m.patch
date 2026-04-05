@@ -1,0 +1,20 @@
+--- build-debug/main.m.orig	2026-04-05 01:35:53.743057058 +0000
++++ build-debug/main.m.mod	2026-04-05 01:35:53.748876568 +0000
+@@ -1,14 +1,8 @@
+-//
+-//  main.m
+-//  Vienna
+-//
+-//  Created by Steve on Sun Mar 14 2004.
+-//  Copyright (c) 2004-2005 Steve Palmer. All rights reserved.
+-//
+-
+ #import <Cocoa/Cocoa.h>
++#import <PSMTabBarControl/PSMTabBarControl.h>
+ 
+ int main(int argc, const char *argv[])
+ {
+-	return NSApplicationMain(argc, argv);
++    [PSMTabBarControl class];
++    return NSApplicationMain(argc, argv);
+ }

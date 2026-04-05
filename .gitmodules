@@ -4,3 +4,6 @@
 [submodule "vienna"]
 	path = vienna
 	url = git@github.com:ViennaRSS/vienna-rss.git
+[submodule "deps/PSMTabBarControl"]
+	path = deps/PSMTabBarControl
+	url = git@github.com:dorianj/PSMTabBarControl.git
