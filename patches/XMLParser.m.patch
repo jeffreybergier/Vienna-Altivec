@@ -1,0 +1,36 @@
+--- vienna/XMLParser.m	2026-04-05 14:14:13.886006342 +0000
++++ vienna/XMLParser.m	2026-04-06 21:48:20.024074210 +0000
+@@ -238,13 +238,14 @@
+ 	NSArray * pathElements = [path componentsSeparatedByString:@"/"];
+ 	XMLParser * treeFound = self;
+ 	
+-	for (NSString * treeName in pathElements)
++	NSEnumerator * enum_treeName = [pathElements objectEnumerator];
++	NSString * treeName;
++	while ((treeName = [enum_treeName nextObject]))
+ 	{
+ 		treeFound = [treeFound treeByName:treeName];
+ 		if (treeFound == nil)
+ 			return nil;
+-	}
+-	return treeFound;
++	}	return treeFound;
+ }
+ 
+ /* treeByName
+@@ -306,11 +307,12 @@
+ 
+ 		// Make a copy of the attributes dictionary but force the keys to
+ 		// lowercase.
+-		for (NSString * keyName in dict)
++		NSEnumerator * enum_keyName = [dict keyEnumerator];
++		NSString * keyName;
++		while ((keyName = [enum_keyName nextObject]))
+ 		{
+ 			[newDict setObject:[dict objectForKey:keyName] forKey:[keyName lowercaseString]];
+-		}
+-		return newDict;
++		}		return newDict;
+ 	}
+ 	return nil;
+ }

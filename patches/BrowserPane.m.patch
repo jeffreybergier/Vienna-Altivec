@@ -1,0 +1,60 @@
+--- vienna/BrowserPane.m	2026-04-05 14:13:20.395661743 +0000
++++ vienna/BrowserPane.m	2026-04-06 21:48:20.213397363 +0000
+@@ -24,7 +24,6 @@
+ #import "Constants.h"
+ #import "AppController.h"
+ #import "Preferences.h"
+-#import "HelperFunctions.h"
+ #import "StringExtensions.h"
+ #import "AddressBarCell.h"
+ #import <WebKit/WebKit.h>
+@@ -215,7 +214,7 @@
+ 	}
+ 	
+ 	if (urlToLoad == nil)
+-		urlToLoad = [NSURL URLWithString:theURL];
++		urlToLoad = [NSURL XP_URLWithString:theURL];
+ 	if (urlToLoad != nil)
+ 	{
+ 		[self loadURL:urlToLoad inBackground:NO];
+@@ -347,12 +346,11 @@
+ 			NSString * pathToErrorPage = [[NSBundle bundleForClass:[self class]] pathForResource:@"errorpage" ofType:@"html"];
+ 			if (pathToErrorPage != nil)
+ 			{
+-				NSString *errorMessage = [NSString stringWithContentsOfFile:pathToErrorPage encoding:NSUTF8StringEncoding error:NULL];
+-				errorMessage = [errorMessage stringByReplacingOccurrencesOfString: @"$ErrorInformation" withString: [error localizedDescription]];
++				NSString *errorMessage = [NSString stringWithContentsOfFile:pathToErrorPage];
++				errorMessage = [errorMessage XP_stringByReplacingOccurrencesOfString: @"$ErrorInformation" withString: [error localizedDescription]];
+ 				if (errorMessage != nil)
+ 				{
+-					[frame loadAlternateHTMLString:errorMessage baseURL:[NSURL fileURLWithPath:pathToErrorPage isDirectory:NO] forUnreachableURL:[[[frame provisionalDataSource] request] URL]];
+-				}
++					[frame loadAlternateHTMLString:errorMessage baseURL:[NSURL XP_fileURLWithPath:pathToErrorPage isDirectory:NO] forUnreachableURL:[[[frame provisionalDataSource] request] URL]];				}
+ 				NSString *unreachableURL = [[[frame provisionalDataSource] unreachableURL] absoluteString];
+ 				if (unreachableURL != nil)
+ 					[addressField setStringValue: [[[frame provisionalDataSource] unreachableURL] absoluteString]];
+@@ -402,12 +400,11 @@
+ 			NSString * pathToErrorPage = [[NSBundle bundleForClass:[self class]] pathForResource:@"errorpage" ofType:@"html"];
+ 			if (pathToErrorPage != nil)
+ 			{
+-				NSString *errorMessage = [NSString stringWithContentsOfFile:pathToErrorPage encoding:NSUTF8StringEncoding error:NULL];
+-				errorMessage = [errorMessage stringByReplacingOccurrencesOfString: @"$ErrorInformation" withString: [error localizedDescription]];
++				NSString *errorMessage = [NSString stringWithContentsOfFile:pathToErrorPage];
++				errorMessage = [errorMessage XP_stringByReplacingOccurrencesOfString: @"$ErrorInformation" withString: [error localizedDescription]];
+ 				if (errorMessage != nil)
+ 				{
+-					[frame loadAlternateHTMLString:errorMessage baseURL:[NSURL fileURLWithPath:pathToErrorPage isDirectory:NO] forUnreachableURL:[[[frame dataSource] request] URL]];
+-				}
++					[frame loadAlternateHTMLString:errorMessage baseURL:[NSURL XP_fileURLWithPath:pathToErrorPage isDirectory:NO] forUnreachableURL:[[[frame dataSource] request] URL]];				}
+ 			}		
+ 		}
+ 		[self endFrameLoad];
+@@ -569,7 +566,7 @@
+ 	{
+ 		NSString * urlString = [addressField stringValue];
+ 		if (urlString != nil)
+-			theURL = [NSURL URLWithString:urlString];
++			theURL = [NSURL XP_URLWithString:urlString];
+ 	}
+ 	return theURL;
+ }

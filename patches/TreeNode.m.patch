@@ -1,0 +1,32 @@
+--- vienna/TreeNode.m	2026-04-05 14:13:20.606588731 +0000
++++ vienna/TreeNode.m	2026-04-06 21:48:19.265157942 +0000
+@@ -153,13 +153,14 @@
+ 		return self;
+ 	
+ 	TreeNode * theNode;
+-	
+-	for (TreeNode * node in children)
++
++	NSEnumerator * enum_node = [children objectEnumerator];
++	TreeNode * node;
++	while ((node = [enum_node nextObject]))
+ 	{
+ 		if ((theNode = [node nodeFromID:n]) != nil)
+ 			return theNode;
+-	}
+-	return nil;
++	}	return nil;
+ }
+ 
+ /* childByName
+@@ -167,7 +168,9 @@
+  */
+ -(TreeNode *)childByName:(NSString *)childName
+ {
+-	for (TreeNode * node in children)
++	NSEnumerator * enum_node = [children objectEnumerator];
++	TreeNode * node;
++	while ((node = [enum_node nextObject]))
+ 	{
+ 		if ([childName isEqual:[node nodeName]])
+ 			return node;

@@ -1,4 +1,19 @@
---- vienna/Preferences.m
-+++ vienna/Preferences.m
-@@ -24,1 +24,0 @@
+--- vienna/Preferences.m	2026-04-05 14:13:20.451584215 +0000
++++ vienna/Preferences.m	2026-04-06 21:48:20.046385626 +0000
+@@ -21,7 +21,6 @@
+ #import "Preferences.h"
+ #import "Constants.h"
+ #import "Message.h"
 -#import <Sparkle/Sparkle.h>
+ 
+ // Initial paths
+ NSString * MA_ApplicationSupportFolder = @"~/Library/Application Support/Vienna";
+@@ -1006,7 +1005,7 @@
+ 	if (![[NSFileManager defaultManager] fileExistsAtPath:feedSourcesFolder isDirectory:&isDirectory])
+ 	{
+ 		NSError * error = nil;
+-		if (![[NSFileManager defaultManager] createDirectoryAtPath:feedSourcesFolder withIntermediateDirectories:YES attributes:nil error:&error])
++		if (![[NSFileManager defaultManager] XP_createDirectoryAtPath:feedSourcesFolder withIntermediateDirectories:YES attributes:nil error:&error])
+ 		{
+ 			NSLog(@"Could not create feed sources folder at path '%@'. Error: %@", feedSourcesFolder, [error localizedDescription]);
+ 		}

@@ -1,0 +1,9 @@
+--- vienna/Sparkle.framework/Versions/A/Headers/SUUpdater.h	2026-04-05 14:13:20.497044395 +0000
++++ vienna/Sparkle.framework/Versions/A/Headers/SUUpdater.h	2026-04-06 21:48:19.382909785 +0000
+@@ -52,4 +52,4 @@
+ // just want to call this every time the user changes the setting in the preferences.
+ - (void)scheduleCheckWithInterval:(NSTimeInterval)interval;
+ 
+-@end
+\ No newline at end of file
++@end

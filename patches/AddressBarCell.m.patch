@@ -1,0 +1,9 @@
+--- vienna/AddressBarCell.m	2026-04-05 14:14:13.756287458 +0000
++++ vienna/AddressBarCell.m	2026-04-06 21:48:20.160993902 +0000
+@@ -65,4 +65,4 @@
+ 		theRect.size.width -= imageSpace;
+ 	return [super drawingRectForBounds:theRect];
+ }
+-@end
+\ No newline at end of file
++@end

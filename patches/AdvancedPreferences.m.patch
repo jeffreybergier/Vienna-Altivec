@@ -1,0 +1,10 @@
+--- vienna/AdvancedPreferences.m	2026-04-05 14:14:13.757054451 +0000
++++ vienna/AdvancedPreferences.m	2026-04-06 21:48:20.116625895 +0000
+@@ -19,7 +19,6 @@
+ 
+ #import "AdvancedPreferences.h"
+ #import "Preferences.h"
+-#import "HelperFunctions.h"
+ 
+ // Private functions
+ @interface AdvancedPreferences (Private)

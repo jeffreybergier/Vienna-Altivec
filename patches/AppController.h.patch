@@ -1,4 +1,10 @@
---- vienna/AppController.h
-+++ vienna/AppController.h
-@@ -25,1 +25,0 @@
+--- vienna/AppController.h	2026-04-05 14:14:13.757641905 +0000
++++ vienna/AppController.h	2026-04-06 21:48:19.060708353 +0000
+@@ -22,7 +22,6 @@
+ #import "Database.h"
+ #import "ArticleController.h"
+ #import "ActivityViewer.h"
 -#import <Growl/GrowlApplicationBridge.h>
+ #import "DownloadWindow.h"
+ #import "FilterView.h"
+ #import "PopupButton.h"

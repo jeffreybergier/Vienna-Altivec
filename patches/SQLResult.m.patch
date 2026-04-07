@@ -1,0 +1,9 @@
+--- vienna/SQLResult.m	2026-04-05 14:14:13.152061724 +0000
++++ vienna/SQLResult.m	2026-04-06 21:48:19.217652617 +0000
+@@ -120,4 +120,4 @@
+ 	return (*mRowAtIndexMethod)(mResult, sRowAtIndexSelector, mPosition++);
+ }
+ 
+-@end
+\ No newline at end of file
++@end

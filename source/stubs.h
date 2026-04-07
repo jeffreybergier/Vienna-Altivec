@@ -20,6 +20,10 @@
 // Sparkle Stubs
 #define SUUpdaterWillRestartNotification @"SUUpdaterWillRestartNotification"
 
+@interface SUUpdater : NSObject
+-(void)checkForUpdates:(id)sender;
+@end
+
 // 10.5 Compatibility Stubs
 #if MAC_OS_X_VERSION_MAX_ALLOWED < 1060
 @protocol NSMenuDelegate <NSObject>

@@ -1,0 +1,57 @@
+--- vienna/FoldersTree.m	2026-04-05 14:14:13.776380589 +0000
++++ vienna/FoldersTree.m	2026-04-06 21:48:19.543725885 +0000
+@@ -23,7 +23,6 @@
+ #import "AppController.h"
+ #import "Constants.h"
+ #import "Preferences.h"
+-#import "HelperFunctions.h"
+ #import "StringExtensions.h"
+ #import "FolderView.h"
+ #import "PopupButton.h"
+@@ -248,10 +247,11 @@
+  */
+ -(void)unarchiveState:(NSArray *)stateArray
+ {
+-	for (NSDictionary * dict in stateArray)
++	NSEnumerator * enum_dict = [stateArray objectEnumerator];
++	NSDictionary * dict;
++	while ((dict = [enum_dict nextObject]))
+ 	{
+-		int folderId = [[dict valueForKey:@"NodeID"] intValue];
+-		TreeNode * node = [rootNode nodeFromID:folderId];
++		int folderId = [[dict valueForKey:@"NodeID"] intValue];		TreeNode * node = [rootNode nodeFromID:folderId];
+ 		if (node != nil)
+ 		{
+ 			BOOL doExpandItem = [[dict valueForKey:@"ExpandedState"] boolValue];
+@@ -280,10 +280,10 @@
+ 	Folder * folder;
+ 	if ([[Preferences standardPreferences] foldersTreeSortMethod] != MA_FolderSort_Manual)
+ 	{
+-		for (folder in listOfFolders)
++		NSEnumerator * enum_folder = [listOfFolders objectEnumerator];
++		while ((folder = [enum_folder nextObject]))
+ 		{
+-			int itemId = [folder itemId];
+-			NSArray * listOfSubFolders = [[Database sharedDatabase] arrayOfFolders:itemId];
++			int itemId = [folder itemId];			NSArray * listOfSubFolders = [[Database sharedDatabase] arrayOfFolders:itemId];
+ 			int count = [listOfSubFolders count];
+ 			TreeNode * subNode;
+ 
+@@ -1126,7 +1126,7 @@
+ 			[stringDragData appendString:feedURL];
+ 			[stringDragData appendString:@"\n"];
+ 			
+-			NSURL * safariURL = [NSURL URLWithString:feedURL];
++			NSURL * safariURL = [NSURL XP_URLWithString:feedURL];
+ 			if (safariURL != nil && ![safariURL isFileURL])
+ 			{
+ 				if (![@"feed" isEqualToString:[safariURL scheme]])
+@@ -1417,7 +1417,7 @@
+ 			[db beginTransaction];
+ 			NSString * feedTitle = [arrayOfTitles objectAtIndex:index];
+ 			NSString * feedURL = [arrayOfURLs objectAtIndex:index];
+-			NSURL * draggedURL = [NSURL URLWithString:feedURL];
++			NSURL * draggedURL = [NSURL XP_URLWithString:feedURL];
+ 			if (([draggedURL scheme] != nil) && [[draggedURL scheme] isEqualToString:@"feed"])
+ 				feedURL = [NSString stringWithFormat:@"http:%@", [draggedURL resourceSpecifier]];
+ 			

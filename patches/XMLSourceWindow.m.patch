@@ -1,0 +1,45 @@
+--- vienna/XMLSourceWindow.m	2026-04-05 14:13:20.614067339 +0000
++++ vienna/XMLSourceWindow.m	2026-04-06 21:48:19.949770737 +0000
+@@ -48,7 +48,7 @@
+ 	NSString * pathToSyntaxHighlighter = [[NSBundle bundleForClass:[self class]] pathForResource:@"XMLSyntaxHighlighter" ofType:@"html"];
+ 	if (pathToSyntaxHighlighter != nil)
+ 	{
+-		NSString *syntaxHighlighter = [NSString stringWithContentsOfFile:pathToSyntaxHighlighter encoding:NSUTF8StringEncoding error:NULL];
++		NSString *syntaxHighlighter = [NSString stringWithContentsOfFile:pathToSyntaxHighlighter];
+ 		if (syntaxHighlighter != nil)
+ 		{
+ 			NSString * errorDescription = nil;
+@@ -61,17 +61,17 @@
+ 			{
+ 				NSStringEncoding encoding;
+ 				NSError * error;
+-				NSString * xmlSource = [NSString stringWithContentsOfFile:feedSourceFilePath usedEncoding:&encoding error:&error];
++				NSString * xmlSource = [NSString stringWithContentsOfFile:feedSourceFilePath];
+ 				if (xmlSource != nil)
+ 				{
+ 					// Get rid of potential body, script, CDATA and other tags within the string that may cause a mess.
+-					xmlSource = [xmlSource stringByReplacingOccurrencesOfString:@"&" withString:@"&amp;"];
+-					xmlSource = [xmlSource stringByReplacingOccurrencesOfString:@"[" withString:@"&#91;"];
+-					xmlSource = [xmlSource stringByReplacingOccurrencesOfString:@"]" withString:@"&#93;"];
+-					xmlSource = [xmlSource stringByReplacingOccurrencesOfString:@"<" withString:@"&lt;"];
+-					xmlSource = [xmlSource stringByReplacingOccurrencesOfString:@">" withString:@"&gt;"];
++					xmlSource = [xmlSource XP_stringByReplacingOccurrencesOfString:@"&" withString:@"&amp;"];
++					xmlSource = [xmlSource XP_stringByReplacingOccurrencesOfString:@"[" withString:@"&#91;"];
++					xmlSource = [xmlSource XP_stringByReplacingOccurrencesOfString:@"]" withString:@"&#93;"];
++					xmlSource = [xmlSource XP_stringByReplacingOccurrencesOfString:@"<" withString:@"&lt;"];
++					xmlSource = [xmlSource XP_stringByReplacingOccurrencesOfString:@">" withString:@"&gt;"];
+ 					
+-					syntaxHighlighter = [syntaxHighlighter stringByReplacingOccurrencesOfString:@"$XMLSourceData" withString:xmlSource];
++					syntaxHighlighter = [syntaxHighlighter XP_stringByReplacingOccurrencesOfString:@"$XMLSourceData" withString:xmlSource];
+ 				}
+ 				else
+ 					errorDescription = [error localizedDescription];
+@@ -82,7 +82,7 @@
+ 				syntaxHighlighter = [NSString stringWithFormat:@"<html><body><br><br><br><center>%@</center><body></html>", errorDescription];
+ 			}
+ 				
+-			[[sourceWebView mainFrame] loadHTMLString:syntaxHighlighter baseURL:[NSURL fileURLWithPath:pathToSyntaxHighlighter isDirectory:NO]];
++			[[sourceWebView mainFrame] loadHTMLString:syntaxHighlighter baseURL:[NSURL XP_fileURLWithPath:pathToSyntaxHighlighter isDirectory:NO]];
+ 		}
+ 	}	
+ }

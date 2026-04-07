@@ -1,0 +1,284 @@
+--- vienna/Database.m	2026-04-05 14:13:20.405400166 +0000
++++ vienna/Database.m	2026-04-06 21:48:19.288647071 +0000
+@@ -239,7 +239,9 @@
+ 			NSDictionary * demoFeedsDict = [NSDictionary dictionaryWithContentsOfFile:pathToPList];
+ 			if (demoFeedsDict)
+ 			{
+-				for (NSString * feedName in demoFeedsDict)
++				NSEnumerator * enum_feedName = [demoFeedsDict keyEnumerator];
++				NSString * feedName;
++				while ((feedName = [enum_feedName nextObject]))
+ 				{
+ 					NSDictionary * itemDict = [demoFeedsDict objectForKey:feedName];
+ 					NSString * feedURL = [itemDict valueForKey:@"URL"];
+@@ -308,7 +310,9 @@
+ 		SQLResult * results = [sqlDatabase performQuery:@"select folder_id, parent_id from folders"];
+ 		if (results && [results rowCount])
+ 		{
+-			for (SQLRow * row in [results rowEnumerator])
++			NSEnumerator * enum_row = [results rowEnumerator];
++			SQLRow * row;
++			while ((row = [enum_row nextObject]))
+ 			{
+ 				int folderId = [[row stringForColumn:@"folder_id"] intValue];
+ 				int parentId = [[row stringForColumn:@"parent_id"] intValue];
+@@ -932,7 +936,8 @@
+ 	[[NSNotificationCenter defaultCenter] postNotificationName:@"MA_Notify_WillDeleteFolder" object:[NSNumber numberWithInt:folderId]];
+ 	
+ 	// Recurse and delete child folders
+-	for (folder in arrayOfChildFolders)
++	NSEnumerator * enum_folder = [arrayOfChildFolders objectEnumerator];
++	while ((folder = [enum_folder nextObject]))
+ 		[self wrappedDeleteFolder:[folder itemId]];
+ 
+ 	// Adjust unread counts on parents
+@@ -963,13 +968,13 @@
+ 			BOOL isDirectory = YES;
+ 			if ([[NSFileManager defaultManager] fileExistsAtPath:feedSourceFilePath isDirectory:&isDirectory] && !isDirectory)
+ 			{
+-				[[NSFileManager defaultManager] removeItemAtPath:feedSourceFilePath error:NULL];
++				[[NSFileManager defaultManager] removeFileAtPath:feedSourceFilePath handler:nil];
+ 			}
+ 			
+ 			NSString * backupPath = [feedSourceFilePath stringByAppendingPathExtension:@"bak"];
+ 			if ([[NSFileManager defaultManager] fileExistsAtPath:backupPath isDirectory:&isDirectory] && !isDirectory)
+ 			{
+-				[[NSFileManager defaultManager] removeItemAtPath:backupPath error:NULL];
++				[[NSFileManager defaultManager] removeFileAtPath:backupPath handler:nil];
+ 			}
+ 		}
+ 	}
+@@ -1329,31 +1334,31 @@
+  * Retrieve a Folder given it's name.
+  */
+ -(Folder *)folderFromName:(NSString *)wantedName
+-{	
++{
++	NSEnumerator * enum_folder = [foldersDict objectEnumerator];
+ 	Folder * folder;
+-	for (folder in [foldersDict objectEnumerator])
++	while ((folder = [enum_folder nextObject]))
+ 	{
+ 		if ([[folder name] isEqualToString:wantedName])
+ 			break;
+ 	}
+ 	return folder;
+ }
+-
+ /* folderFromFeedURL
+  * Returns the RSSFolder that is subscribed to the specified feed URL.
+  */
+ -(Folder *)folderFromFeedURL:(NSString *)wantedFeedURL;
+ {
++	NSEnumerator * enum_folder = [foldersDict objectEnumerator];
+ 	Folder * folder;
+-	
+-	for (folder in [foldersDict objectEnumerator])
++
++	while ((folder = [enum_folder nextObject]))
+ 	{
+ 		if ([[folder feedURL] isEqualToString:wantedFeedURL])
+ 			break;
+ 	}
+ 	return folder;
+ }
+-
+ /* handleAutoSortFoldersTreeChange
+  * Called when preference changes for sorting folders tree.
+  * Store the new method in the database.
+@@ -1654,10 +1659,11 @@
+ 		results = [sqlDatabase performQuery:@"select * from smart_folders"];
+ 		if (results && [results rowCount])
+ 		{
+-			for (SQLRow * row in [results rowEnumerator])
++			NSEnumerator * enum_row = [results rowEnumerator];
++			SQLRow * row;
++			while ((row = [enum_row nextObject]))
+ 			{
+-				NSString * search_string = [row stringForColumn:@"search_string"];
+-				int folderId = [[row stringForColumn:@"folder_id"] intValue];
++				NSString * search_string = [row stringForColumn:@"search_string"];				int folderId = [[row stringForColumn:@"folder_id"] intValue];
+ 				
+ 				CriteriaTree * criteriaTree = [[CriteriaTree alloc] initWithString:search_string];
+ 				[smartfoldersDict setObject:criteriaTree forKey:[NSNumber numberWithInt:folderId]];
+@@ -1742,11 +1748,12 @@
+ 		
+ 		results = [sqlDatabase performQuery:@"select * from folders order by folder_id"];
+ 		if (results && [results rowCount])
+-		{			
+-			for (SQLRow * row in [results rowEnumerator])
++		{
++			NSEnumerator * enum_row = [results rowEnumerator];
++			SQLRow * row;
++			while ((row = [enum_row nextObject]))
+ 			{
+-				NSString * name = [row stringForColumn:@"foldername"];
+-				NSDate * lastUpdate = [NSDate dateWithTimeIntervalSince1970:[[row stringForColumn:@"last_update"] doubleValue]];
++				NSString * name = [row stringForColumn:@"foldername"];				NSDate * lastUpdate = [NSDate dateWithTimeIntervalSince1970:[[row stringForColumn:@"last_update"] doubleValue]];
+ 				int newItemId = [[row stringForColumn:@"folder_id"] intValue];
+ 				int newParentId = [[row stringForColumn:@"parent_id"] intValue];
+ 				int unreadCount = [[row stringForColumn:@"unread_count"] intValue];
+@@ -1779,10 +1786,12 @@
+ 		[results release];
+ 
+ 		// Load all RSS folders and add them to the list.
+-		results = [sqlDatabase performQuery:@"select * from rss_folders"];
++		results = [sqlDatabase performQuery:@"select * from smart_folders"];
+ 		if (results && [results rowCount])
+ 		{
+-			for (SQLRow * row in[results rowEnumerator])
++			NSEnumerator * enum_row = [results rowEnumerator];
++			SQLRow * row;
++			while ((row = [enum_row nextObject]))
+ 			{
+ 				int folderId = [[row stringForColumn:@"folder_id"] intValue];
+ 				long bloglinesId = [[row stringForColumn:@"bloglines_id"] intValue];
+@@ -1803,12 +1812,13 @@
+ 		}
+ 		[results release];
+ 
+-		// Fix the childUnreadCount for every parent		
+-		for (Folder * folder in [foldersDict objectEnumerator])
++		// Fix the childUnreadCount for every parent
++		NSEnumerator * enum_folder = [foldersDict objectEnumerator];
++		Folder * folder;
++		while ((folder = [enum_folder nextObject]))
+ 		{
+-			if ([folder unreadCount] > 0 && [folder parentId] != MA_Root_Folder)
+-			{
+-				Folder * parentFolder = [self folderFromID:[folder parentId]];
++		        if ([folder unreadCount] > 0 && [folder parentId] != MA_Root_Folder)
++		        {				Folder * parentFolder = [self folderFromID:[folder parentId]];
+ 				while (parentFolder != nil)
+ 				{
+ 					[parentFolder setChildUnreadCount:[parentFolder childUnreadCount] + [folder unreadCount]];
+@@ -1835,14 +1845,15 @@
+ 
+ 	NSMutableArray * newArray = [NSMutableArray array];
+ 	if (newArray != nil)
+-	{		
+-		for (Folder * folder in [foldersDict objectEnumerator])
++	{
++		NSEnumerator * enum_folder = [foldersDict objectEnumerator];
++		Folder * folder;
++		while ((folder = [enum_folder nextObject]))
+ 		{
+ 			if ([folder parentId] == parentId)
+ 				[newArray addObject:folder];
+ 		}
+-	}
+-	return [newArray sortedArrayUsingSelector:@selector(folderNameCompare:)];
++	}	return [newArray sortedArrayUsingSelector:@selector(folderNameCompare:)];
+ }
+ 
+ /* arrayOfSubFolders
+@@ -1854,8 +1865,10 @@
+ 	if (newArray != nil)
+ 	{
+ 		int parentId = [folder itemId];
+-		
+-		for (Folder * item in [foldersDict objectEnumerator])
++
++		NSEnumerator * enum_item = [foldersDict objectEnumerator];
++		Folder * item;
++		while ((item = [enum_item nextObject]))
+ 		{
+ 			if ([item parentId] == parentId)
+ 			{
+@@ -1864,8 +1877,7 @@
+ 				else
+ 					[newArray addObject:item];
+ 			}
+-		}
+-	}
++		}	}
+ 	return [newArray sortedArrayUsingSelector:@selector(folderIDCompare:)];
+ }
+ 
+@@ -1907,7 +1919,8 @@
+ 			int unread_count = 0;
+ 			SQLRow * row;
+ 
+-			for (row in [results rowEnumerator])
++			NSEnumerator * enum_row = [results rowEnumerator];
++			while ((row = [enum_row nextObject]))
+ 			{
+ 				NSString * guid = [row stringForColumn:@"message_id"];
+ 				BOOL read_flag = [[row stringForColumn:@"read_flag"] intValue];
+@@ -2022,7 +2035,8 @@
+ 	NSMutableString * sqlString = [[NSMutableString alloc] init];
+ 	int count = 0;
+ 
+-	for (Criteria * criteria in [criteriaTree criteriaEnumerator])
++	NSEnumerator * enum_criteria = [criteriaTree criteriaEnumerator];	Criteria * criteria;
++	while ((criteria = [enum_criteria nextObject]))
+ 	{
+ 		Field * field = [self fieldByName:[criteria field]];
+ 		NSAssert1(field != nil, @"Criteria field %@ does not have an associated database field", [criteria field]);
+@@ -2217,14 +2231,15 @@
+ 			[self verifyThreadSafety];
+ 			SQLResult * results = [sqlDatabase performQueryWithFormat:@"select message_id from messages where folder_id=%d and read_flag=0", folderId];
+ 			if (results && [results rowCount])
+-			{				
+-				for (SQLRow * row in [results rowEnumerator])
++			{
++				NSEnumerator * enum_row = [results rowEnumerator];
++				SQLRow * row;
++				while ((row = [enum_row nextObject]))
+ 				{
+ 					NSString * guid = [row stringForColumn:@"message_id"];
+ 					[newArray addObject:[ArticleReference makeReferenceFromGUID:guid inFolder:folderId]];
+ 				}
+-			}
+-			[results release];
++			}			[results release];
+ 		}
+ 	}
+ 	return newArray;
+@@ -2277,10 +2292,11 @@
+         Article * article;
+         NSString * text;
+ 
+-		for (SQLRow * row in [results rowEnumerator])
+-		{
+-			article = [[Article alloc] initWithGuid:[row stringForColumn:@"message_id"]];
+-			[article setTitle:[row stringForColumn:@"title"]];
++        	NSEnumerator * enum_row = [results rowEnumerator];
++        	SQLRow * row;
++        	while ((row = [enum_row nextObject]))
++        	{
++        		article = [[Article alloc] initWithGuid:[row stringForColumn:@"message_id"]];			[article setTitle:[row stringForColumn:@"title"]];
+ 			[article setAuthor:[row stringForColumn:@"sender"]];
+ 			[article setLink:[row stringForColumn:@"link"]];
+ 			[article setEnclosure:[row stringForColumn:@"enclosure"]];
+@@ -2336,7 +2352,8 @@
+ 	BOOL result = NO;
+ 
+ 	// Recurse and mark child folders read too
+-	for (folder in [self arrayOfFolders:folderId])
++	NSEnumerator * enum_folder = [[self arrayOfFolders:folderId] objectEnumerator];
++	while ((folder = [enum_folder nextObject]))
+ 	{
+ 		if ([self markFolderRead:[folder itemId]])
+ 			result = YES;
+@@ -2483,7 +2500,9 @@
+ 	{
+ 		if ([results rowCount] > 0)
+ 		{
+-			for (SQLRow * row in [results rowEnumerator])
++			NSEnumerator * enum_row = [results rowEnumerator];
++			SQLRow * row;
++			while ((row = [enum_row nextObject]))
+ 			{
+ 				NSString * guid = [row stringForColumn:@"message_id"];
+ 				if (guid != nil)
+@@ -2491,8 +2510,7 @@
+ 					[articleGuids addObject:guid];
+ 				}
+ 			}
+-		}
+-		
++		}		
+ 		[results release];
+ 	}
+ 	

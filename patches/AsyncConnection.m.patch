@@ -1,0 +1,24 @@
+--- vienna/AsyncConnection.m	2026-04-05 14:13:20.393626885 +0000
++++ vienna/AsyncConnection.m	2026-04-06 21:48:20.263793762 +0000
+@@ -156,7 +156,9 @@
+ 
+ 	if (httpHeaders != nil)
+ 	{
+-		for (NSString * httpFieldName in httpHeaders)
++		NSEnumerator * httpFieldNameEnum = [httpHeaders keyEnumerator];
++		NSString * httpFieldName;
++		while ((httpFieldName = [httpFieldNameEnum nextObject]))
+ 		{
+ 			NSString * fieldValue = [httpHeaders objectForKey:httpFieldName];
+ 			if (fieldValue != nil && ![fieldValue isBlank])
+@@ -242,7 +244,9 @@
+ 			// Add the HTTP headers details to the log for this connection for
+ 			// debugging purposes.
+ 			[headerDetail setString:NSLocalizedString(@"Headers:\n", nil)];
+-			for (NSString * headerField in responseHeaders)
++			NSEnumerator * headerFieldEnum = [responseHeaders keyEnumerator];
++			NSString * headerField;
++			while ((headerField = [headerFieldEnum nextObject]))
+ 			{
+ 				[headerDetail appendFormat:@"\t%@: %@\n", headerField, [[httpResponse allHeaderFields] valueForKey:headerField]];
+ 			}

@@ -1,0 +1,17 @@
+--- vienna/Export.m	2026-04-05 14:14:13.772586120 +0000
++++ vienna/Export.m	2026-04-06 21:48:20.034664415 +0000
+@@ -96,10 +96,11 @@
+ {
+ 	int countExported = 0;
+ 
+-	for (Folder * folder in feedArray)
++	NSEnumerator * enum_folder = [feedArray objectEnumerator];
++	Folder * folder;
++	while ((folder = [enum_folder nextObject]))
+ 	{
+-		NSMutableDictionary * itemDict = [NSMutableDictionary dictionary];
+-		NSString * name = [folder name];
++		NSMutableDictionary * itemDict = [NSMutableDictionary dictionary];		NSString * name = [folder name];
+ 		if (IsGroupFolder(folder))
+ 		{
+ 			NSArray * subFolders = [db arrayOfFolders:[folder itemId]];

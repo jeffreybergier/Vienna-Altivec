@@ -1,0 +1,183 @@
+--- vienna/ArticleController.m	2026-04-05 14:14:13.760705547 +0000
++++ vienna/ArticleController.m	2026-04-06 21:48:19.210152356 +0000
+@@ -388,7 +388,9 @@
+ 	// flag on the article while simultaneously removing it from our copies
+ 	Database * db = [Database sharedDatabase];
+ 	[db beginTransaction];
+-	for (Article * theArticle in articleArray)
++	NSEnumerator * enum_theArticle = [articleArray objectEnumerator];
++	Article * theArticle;
++	while ((theArticle = [enum_theArticle nextObject]))
+ 	{
+ 		if (![theArticle isRead])
+ 			needFolderRedraw = YES;
+@@ -448,7 +450,9 @@
+ 	Database * db = [Database sharedDatabase];
+ 
+ 	[db beginTransaction];
+-	for (Article * theArticle in articleArray)	
++	NSEnumerator * enum_theArticle = [articleArray objectEnumerator];
++	Article * theArticle;
++	while ((theArticle = [enum_theArticle nextObject]))
+ 	{
+ 		if (![theArticle isRead])
+ 			needFolderRedraw = YES;
+@@ -457,8 +461,7 @@
+ 			[currentArrayCopy removeObject:theArticle];
+ 			[folderArrayCopy removeObject:theArticle];
+ 		}
+-	}
+-	[db commitTransaction];
++	}	[db commitTransaction];
+ 	[currentArrayOfArticles autorelease];
+ 	currentArrayOfArticles = currentArrayCopy;
+ 	[folderArrayOfArticles autorelease];
+@@ -509,14 +512,15 @@
+ 	SEL markFlagUndoAction = flagged ? @selector(markUnflagUndo:) : @selector(markFlagUndo:);
+ 	[undoManager registerUndoWithTarget:self selector:markFlagUndoAction object:articleArray];
+ 	[undoManager setActionName:NSLocalizedString(@"Flag", nil)];
+-	
++
+ 	[db beginTransaction];
+-	for (Article * theArticle in articleArray)
++	NSEnumerator * enum_theArticle = [articleArray objectEnumerator];
++	Article * theArticle;
++	while ((theArticle = [enum_theArticle nextObject]))
+ 	{
+ 		[theArticle markFlagged:flagged];
+ 		[db markArticleFlagged:[theArticle folderId] guid:[theArticle guid] isFlagged:flagged];
+-	}
+-	[db commitTransaction];
++	}	[db commitTransaction];
+ 	[mainArticleView refreshFolder:MA_Refresh_RedrawList];
+ }
+ 
+@@ -569,8 +573,10 @@
+ {
+ 	Database * db = [Database sharedDatabase];
+ 	int lastFolderId = -1;
+-	
+-	for (Article * theArticle in articleArray)
++
++	NSEnumerator * enum_theArticle = [articleArray objectEnumerator];
++	Article * theArticle;
++	while ((theArticle = [enum_theArticle nextObject]))
+ 	{
+ 		int folderId = [theArticle folderId];
+ 		[db markArticleRead:folderId guid:[theArticle guid] isRead:readFlag];
+@@ -578,8 +584,7 @@
+ 		if (folderId != lastFolderId && lastFolderId != -1)
+ 			[foldersTree updateFolder:lastFolderId recurseToParents:YES];
+ 		lastFolderId = folderId;
+-	}
+-	if (lastFolderId != -1)
++	}	if (lastFolderId != -1)
+ 		[foldersTree updateFolder:lastFolderId recurseToParents:YES];
+ }
+ 
+@@ -616,11 +621,13 @@
+ 		NSUndoManager * undoManager = [[NSApp mainWindow] undoManager];
+ 		[undoManager registerUndoWithTarget:self selector:@selector(markAllReadUndo:) object:refArray];
+ 		[undoManager setActionName:NSLocalizedString(@"Mark All Read", nil)];
+-	}
+ 
+-	for (Article * theArticle in folderArrayOfArticles)
+-	{
+-		[theArticle markRead:YES];
++		NSEnumerator * enum_theArticle = [folderArrayOfArticles objectEnumerator];
++		Article * theArticle;
++		while ((theArticle = [enum_theArticle nextObject]))
++		{
++			[theArticle markRead:YES];
++		}
+ 	}
+ 	if (refreshFlag)
+ 		[mainArticleView refreshFolder:MA_Refresh_RedrawList];
+@@ -635,8 +642,10 @@
+ {
+ 	NSMutableArray * refArray = [NSMutableArray array];
+ 	Database * db = [Database sharedDatabase];
+-	
+-	for (Folder * folder in folderArray)
++
++	NSEnumerator * enum_folder = [folderArray objectEnumerator];
++	Folder * folder;
++	while ((folder = [enum_folder nextObject]))
+ 	{
+ 		int folderId = [folder itemId];
+ 		if (IsGroupFolder(folder) && undoFlag)
+@@ -645,8 +654,7 @@
+ 		}
+ 		else if (IsRSSFolder(folder))
+ 		{
+-			if (undoFlag)
+-				[refArray addObjectsFromArray:[db arrayOfUnreadArticles:folderId]];
++			[refArray addObjectsFromArray:[db arrayOfUnreadArticles:folderId]];
+ 			if ([db markFolderRead:folderId])
+ 			{
+ 				[foldersTree updateFolder:folderId recurseToParents:YES];
+@@ -665,7 +673,6 @@
+ 	}
+ 	return refArray;
+ }
+-
+ /* currentCacheContainsFolder
+  * Scans the current article cache to determine if any article is a member of the specified
+  * folder and returns YES if so.
+@@ -692,16 +699,18 @@
+ {
+ 	Database * db = [Database sharedDatabase];
+ 	int lastFolderId = -1;
+-	BOOL needRefilter = NO;
+ 	
+ 	// Set up to undo or redo this action
+ 	NSUndoManager * undoManager = [[NSApp mainWindow] undoManager];
+ 	SEL markAllReadUndoAction = readFlag ? @selector(markAllReadUndo:) : @selector(markAllReadRedo:);
+ 	[undoManager registerUndoWithTarget:self selector:markAllReadUndoAction object:refArray];
+ 	[undoManager setActionName:NSLocalizedString(@"Mark All Read", nil)];
+-	
++
+ 	[db beginTransaction];
+-	for (ArticleReference *ref in refArray)
++	BOOL needReload = NO;
++	NSEnumerator * enum_ref = [refArray objectEnumerator];
++	ArticleReference *ref;
++	while ((ref = [enum_ref nextObject]))
+ 	{
+ 		int folderId = [ref folderId];
+ 		[db markArticleRead:folderId guid:[ref guid] isRead:readFlag];
+@@ -709,23 +718,26 @@
+ 		{
+ 			[foldersTree updateFolder:lastFolderId recurseToParents:YES];
+ 			if (lastFolderId == currentFolderId)
+-				needRefilter = YES;
++				needReload = YES;
+ 		}
+ 		lastFolderId = folderId;
+ 	}
+ 	[db commitTransaction];
+-	
++
+ 	if (lastFolderId != -1)
+ 	{
+ 		[foldersTree updateFolder:lastFolderId recurseToParents:YES];
+ 		if (lastFolderId == currentFolderId)
+-			needRefilter = YES;
+-        if (!IsRSSFolder([db folderFromID:currentFolderId]))
+-            [mainArticleView refreshFolder:MA_Refresh_ReloadFromDatabase];
+-        else if (needRefilter)
+-            [mainArticleView refreshFolder:MA_Refresh_ReapplyFilter];
++			needReload = YES;
+ 	}
+-	
++
++	if (needReload)
++	{
++		if (!IsRSSFolder([db folderFromID:currentFolderId]))
++			[mainArticleView refreshFolder:MA_Refresh_ReloadFromDatabase];
++		else
++			[mainArticleView refreshFolder:MA_Refresh_ReapplyFilter];
++	}	
+ 	// The info bar has a count of unread articles so we need to
+ 	// update that.
+ 	[[NSApp delegate] showUnreadCountOnApplicationIconAndWindowTitle];

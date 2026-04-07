@@ -1,0 +1,19 @@
+--- vienna/NewSubscription.m	2026-04-05 14:14:13.784912271 +0000
++++ vienna/NewSubscription.m	2026-04-06 21:48:19.300308658 +0000
+@@ -69,12 +69,13 @@
+ 			[feedSource removeAllItems];
+ 			if (sourcesDict)
+ 			{
+-				for (NSString * key in sourcesDict)
++				NSEnumerator * enum_key = [sourcesDict keyEnumerator];
++				NSString * key;
++				while ((key = [enum_key nextObject]))
+ 					[feedSource addItemWithTitle:NSLocalizedString(key, nil)];
+ 				[feedSource setEnabled:YES];
+ 				[feedSource selectItemWithTitle:@"URL"];
+-			}
+-		}
++			}		}
+ 	}
+ 	if (!sourcesDict)
+ 		[feedSource setEnabled:NO];

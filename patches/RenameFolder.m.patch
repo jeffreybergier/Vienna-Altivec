@@ -1,0 +1,10 @@
+--- vienna/RenameFolder.m	2026-04-05 14:14:13.794330280 +0000
++++ vienna/RenameFolder.m	2026-04-06 21:48:19.080705259 +0000
+@@ -20,7 +20,6 @@
+ 
+ #import "RenameFolder.h"
+ #import "StringExtensions.h"
+-#import "HelperFunctions.h"
+ 
+ // Private functions
+ @interface RenameFolder (Private)

@@ -1,0 +1,174 @@
+--- vienna/RefreshManager.m	2026-04-05 14:14:13.793992907 +0000
++++ vienna/RefreshManager.m	2026-04-06 21:48:20.172700572 +0000
+@@ -199,14 +199,15 @@
+ -(void)refreshSubscriptions:(NSArray *)foldersArray ignoringSubscriptionStatus:(BOOL)ignoreSubStatus
+ {
+ 	statusMessageDuringRefresh = NSLocalizedString(@"Refreshing subscriptions...", nil);
+-		
+-	for (Folder * folder in foldersArray)
++
++	NSEnumerator * enum_folder = [foldersArray objectEnumerator];
++	Folder * folder;
++	while ((folder = [enum_folder nextObject]))
+ 	{
+ 		if (IsGroupFolder(folder))
+ 			[self refreshSubscriptions:[[Database sharedDatabase] arrayOfFolders:[folder itemId]] ignoringSubscriptionStatus:NO];
+ 		else if (IsRSSFolder(folder))
+-		{
+-			if (!IsUnsubscribed(folder) || ignoreSubStatus)
++		{			if (!IsUnsubscribed(folder) || ignoreSubStatus)
+ 			{
+ 				if (![self isRefreshingFolder:folder ofType:MA_Refresh_Feed])
+ 				{
+@@ -228,8 +229,10 @@
+ -(void)refreshFolderIconCacheForSubscriptions:(NSArray *)foldersArray
+ {
+ 	statusMessageDuringRefresh = NSLocalizedString(@"Refreshing folder images...", nil);
+-	
+-	for (Folder * folder in foldersArray)
++
++	NSEnumerator * enum_folder = [foldersArray objectEnumerator];
++	Folder * folder;
++	while ((folder = [enum_folder nextObject]))
+ 	{
+ 		if (IsGroupFolder(folder))
+ 			[self refreshFolderIconCacheForSubscriptions:[[Database sharedDatabase] arrayOfFolders:[folder itemId]]];
+@@ -239,7 +242,6 @@
+ 		}
+ 	}
+ }
+-
+ /* refreshFavIcon
+  * Adds the specified folder to the refreshArray.
+  */
+@@ -270,14 +272,15 @@
+  */
+ -(BOOL)isRefreshingFolder:(Folder *)folder ofType:(RefreshTypes)type
+ {
+-	for (RefreshItem * item in refreshArray)
++	NSEnumerator * enum_item = [refreshArray objectEnumerator];
++	RefreshItem * item;
++	while ((item = [enum_item nextObject]))
+ 	{
+ 		if ([item folder] == folder && [item type] == type)
+ 			return YES;
+ 	}
+ 	return NO;
+ }
+-
+ /* statusMessageDuringRefresh
+  * Returns the string to be displayed during a refresh.
+  */
+@@ -292,17 +295,18 @@
+ -(void)cancelAll
+ {
+ 	[refreshArray removeAllObjects];
+-	
++
+ 	// We don't know whether to remove the connections from the array, because some might already be complete.
+ 	// Let the cancel method take care of that.
+ 	// Don't cancel until we've enumerated the whole array, however,
+ 	// because it can have the side effect of changing the array.
+-	for (AsyncConnection * connection in connectionsArray)
++	NSEnumerator * enum_connection = [connectionsArray objectEnumerator];
++	AsyncConnection * connection;
++	while ((connection = [enum_connection nextObject]))
+ 	{
+ 		[connection performSelector:@selector(cancel) withObject:nil afterDelay:0.0];
+ 	}
+ }
+-
+ /* totalConnections
+  * Returns the current number of concurrent active connections.
+  */
+@@ -472,14 +476,16 @@
+ 	
+ 	// Compute the URL for this connection
+ 	NSString * urlString = [folder feedURL];
++	if (urlString == nil)
++		return;
+ 	NSURL * url = nil;
+ 	
+ 	if ([urlString hasPrefix:@"file://"])
+ 		url = [NSURL fileURLWithPath:[[urlString substringFromIndex:7] stringByExpandingTildeInPath]];
+ 	else if ([urlString hasPrefix:@"feed://"])
+-		url = [NSURL URLWithString:[NSString stringWithFormat:@"http://%@", [urlString substringFromIndex:7]]];
++		url = [NSURL XP_URLWithString:[NSString stringWithFormat:@"http://%@", [urlString substringFromIndex:7]]];
+ 	else
+-		url = [NSURL URLWithString:urlString];
++		url = [NSURL XP_URLWithString:urlString];
+ 	
+ 	// Seed the activity log for this feed.
+ 	[aItem clearDetails];
+@@ -546,7 +552,7 @@
+ 		NSString * favIconPath = [NSString stringWithFormat:@"http://%@/favicon.ico", [[[folder homePage] trim] baseURL]];
+ 		
+ 		[self setFolderUpdatingFlag:folder flag:YES];
+-		if ([conn beginLoadDataFromURL:[NSURL URLWithString:favIconPath]
++		if ([conn beginLoadDataFromURL:[NSURL XP_URLWithString:favIconPath]
+ 							  username:nil
+ 							  password:nil
+ 							  delegate:self
+@@ -626,7 +632,7 @@
+ 			}
+ 			else
+ 			{
+-				[self refreshFeed:folder fromURL:[NSURL URLWithString:redirectURL] withLog:[connector aItem]];
++				[self refreshFeed:folder fromURL:[NSURL XP_URLWithString:redirectURL] withLog:[connector aItem]];
+ 				[self removeConnection:connector];
+ 				return;
+ 			}
+@@ -654,16 +660,15 @@
+ 					if ([defaultManager fileExistsAtPath:feedSourcePath isDirectory:&isDirectory] && !isDirectory)
+ 					{
+ 						NSString * backupPath = [feedSourcePath stringByAppendingPathExtension:@"bak"];
+-						if (![defaultManager fileExistsAtPath:backupPath] || [defaultManager removeItemAtPath:backupPath error:NULL]) // Remove any old backup first
++						if (![defaultManager fileExistsAtPath:backupPath] || [defaultManager removeFileAtPath:backupPath handler:nil]) // Remove any old backup first
+ 						{
+-							[defaultManager moveItemAtPath:feedSourcePath toPath:backupPath error:NULL];
++							[defaultManager movePath:feedSourcePath toPath:backupPath handler:nil];
+ 						}
+ 					}
+-				}
+-				
+-				[receivedData writeToFile:feedSourcePath options:NSAtomicWrite error:NULL];
+-			}
+-			
++					}
++
++					[receivedData writeToFile:feedSourcePath atomically:YES];
++					}
+ 			// Create a new rich XML parser instance that will take care of
+ 			// parsing the XML data we just got.
+ 			if (newFeed == nil || ![newFeed parseRichXML:receivedData])
+@@ -693,13 +698,14 @@
+ 			NSMutableArray * articleGuidArray = [NSMutableArray array];
+ 			
+ 			// Parse off items.
+-			
+-			for (FeedItem * newsItem in [newFeed items])
++
++			NSEnumerator * newsItemEnum = [[newFeed items] objectEnumerator];
++			FeedItem * newsItem;
++			while ((newsItem = [newsItemEnum nextObject]))
+ 			{
+ 				NSDate * articleDate = [newsItem date];
+-				
+-				NSString * articleGuid = [newsItem guid];
+-				
++
++				NSString * articleGuid = [newsItem guid];				
+ 				// This routine attempts to synthesize a GUID from an incomplete item that lacks an
+ 				// ID field. Generally we'll have three things to work from: a link, a title and a
+ 				// description. The link alone is not sufficiently unique and I've seen feeds where
+@@ -757,7 +763,9 @@
+ 				[folder clearCache];
+ 				 // Should we wrap the entire loop or just individual article updates?
+ 				[db beginTransaction];
+-				for (Article * article in articleArray)
++				NSEnumerator * articleEnum = [articleArray objectEnumerator];
++				Article * article;
++				while ((article = [articleEnum nextObject]))
+ 				{
+ 					if ([db createArticle:folderId article:article guidHistory:guidHistory] && ([article status] == MA_MsgStatus_New))
+ 						++newArticlesFromFeed;

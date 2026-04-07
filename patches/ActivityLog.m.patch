@@ -1,0 +1,44 @@
+--- vienna/ActivityLog.m	2026-04-05 14:13:19.492532930 +0000
++++ vienna/ActivityLog.m	2026-04-06 21:48:19.097474685 +0000
+@@ -104,13 +104,14 @@
+ 	NSMutableString * detailString = [NSMutableString stringWithString:@""];
+ 	if (details != nil)
+ 	{
+-		for (NSString * aString in details)
+-		{
+-			[detailString appendString:aString];
+-			[detailString appendString:@"\n"];
+-		}
+-	}
+-	return detailString;
++	        NSEnumerator * enum_details = [details objectEnumerator];
++	        NSString * aString;
++	        while ((aString = [enum_details nextObject]))
++	        {
++	                [detailString appendString:aString];
++	                [detailString appendString:@"\n"];
++	        }
++	}	return detailString;
+ }
+ 
+ /* description
+@@ -179,13 +180,13 @@
+ 	int indexOfItem = 0;
+ 	ActivityItem * item;
+ 
+-	for (item in log)
++	NSEnumerator * enum_log = [log objectEnumerator];
++	while ((item = [enum_log nextObject]))
+ 	{
+-		if ([[item name] caseInsensitiveCompare:name] == NSOrderedSame)
+-			break;
+-		++indexOfItem;
+-	}
+-	*indexPointer = indexOfItem;
++	        if ([[item name] caseInsensitiveCompare:name] == NSOrderedSame)
++	                break;
++	        ++indexOfItem;
++	}	*indexPointer = indexOfItem;
+ 	return item;
+ }
+ 

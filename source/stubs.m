@@ -8,3 +8,15 @@
 +(BOOL)isGrowlInstalled { return NO; }
 +(BOOL)isGrowlRunning { return NO; }
 @end
+
+@implementation SUUpdater
+-(void)awakeFromNib;
+{
+    NSLog(@"[SUUpdater] Stub initialized from NIB");
+}
+
+-(void)checkForUpdates:(id)sender;
+{
+    NSLog(@"[SUUpdater] checkForUpdates: called (Stub)");
+}
+@end

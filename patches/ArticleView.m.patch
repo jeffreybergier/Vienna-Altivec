@@ -1,0 +1,38 @@
+--- vienna/ArticleView.m	2026-04-05 14:14:13.762282701 +0000
++++ vienna/ArticleView.m	2026-04-06 21:48:19.458637879 +0000
+@@ -22,7 +22,6 @@
+ #import "ArticleView.h"
+ #import "AppController.h"
+ #import "Preferences.h"
+-#import "HelperFunctions.h"
+ #import "StringExtensions.h"
+ #import <WebKit/WebKit.h>
+ #import "BrowserView.h"
+@@ -92,8 +91,7 @@
+ 	if (stylePathMappings == nil)
+ 		stylePathMappings = [[NSMutableDictionary alloc] init];
+ 	
+-	NSString * path = [[[NSBundle mainBundle] sharedSupportPath] stringByAppendingPathComponent:@"Styles"];
+-	loadMapFromPath(path, stylePathMappings, YES, nil);
++	NSString * path = [[[[NSBundle mainBundle] resourcePath] stringByDeletingLastPathComponent] stringByAppendingPathComponent:@"SharedSupport/Styles"];	loadMapFromPath(path, stylePathMappings, YES, nil);
+ 	
+ 	path = [[Preferences standardPreferences] stylesFolder];
+ 	loadMapFromPath(path, stylePathMappings, YES, nil);
+@@ -114,7 +112,7 @@
+ 	if (path != nil)
+ 	{
+ 		NSString * filePath = [path stringByAppendingPathComponent:@"template.html"];
+-		NSString * templateString = [NSString stringWithContentsOfFile:filePath usedEncoding:NULL error:NULL];
++		NSString * templateString = [NSString stringWithContentsOfFile:filePath];
+ 		// Sanity check the file. Obviously anything bigger than 0 bytes but smaller than a valid template
+ 		// format is a problem but we'll worry about that later. There's only so much rope we can give.
+ 		if (templateString != nil && [templateString length] > 0u)
+@@ -245,7 +243,7 @@
+ 	[[self mainFrame] loadData:[NSData dataWithBytes:utf8String length:strlen(utf8String)]
+ 							 MIMEType:@"text/html" 
+ 					 textEncodingName:@"utf-8" 
+-							  baseURL:[NSURL URLWithString:urlString]];
++							  baseURL:[NSURL XP_URLWithString:urlString]];
+ }
+ 
+ /* keyDown

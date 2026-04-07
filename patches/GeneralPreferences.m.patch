@@ -1,0 +1,11 @@
+--- vienna/GeneralPreferences.m	2026-04-05 14:14:13.777324915 +0000
++++ vienna/GeneralPreferences.m	2026-04-06 21:48:19.610357518 +0000
+@@ -134,7 +134,7 @@
+ 	NSBundle * appBundle = [NSBundle mainBundle];
+ 	NSString * ourAppName = [[[appBundle executablePath] lastPathComponent] stringByDeletingPathExtension];
+ 	BOOL onTheList = NO;
+-	NSURL * testURL = [NSURL URLWithString:@"feed://www.test.com"];
++	NSURL * testURL = [NSURL XP_URLWithString:@"feed://www.test.com"];
+ 	NSString * registeredAppURL = nil;
+ 	CFURLRef appURL = nil;
+ 	

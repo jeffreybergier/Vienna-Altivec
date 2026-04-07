@@ -14,17 +14,20 @@
 #    docker compose run --rm altivec "cd /repo/altivec/apps/SingleWindow && make"
 #
 # 5a. Use with Gemini CLI (AI Assistant):
-#    docker compose run --rm altivec-intelligence
+#    docker compose run --rm altivec-gemini
 #
-# 5b. Use with standard shell (no AI):
+# 5b. Use with Claude Code (AI Assistant):
+#    docker compose run --rm altivec-claude
+#
+# 5c. Use with standard shell (no AI):
 #    docker compose run --rm altivec
 #
 
 services:
-  altivec-intelligence:
+  altivec-gemini:
     extends:
       file: ./altivec/compose.yml
-      service: altivec-intelligence
+      service: altivec-gemini
     volumes:
       - .:/repo/user
       - ~/.ssh/authorized_keys:/root/.ssh/authorized_keys:ro
@@ -33,7 +36,20 @@ services:
       - ~/.ssh/id_rsa.pub:/root/.ssh/id_rsa.pub:ro
       - ~/.ssh/known_hosts:/root/.ssh/known_hosts
       - ~/.ssh/known_hosts.old:/root/.ssh/known_hosts.old
+    working_dir: /repo/user
 
+  altivec-claude:
+    extends:
+      file: ./altivec/compose.yml
+      service: altivec-claude
+    volumes:
+      - .:/repo/user
+      - ~/.ssh/authorized_keys:/root/.ssh/authorized_keys:ro
+      - ~/.ssh/config:/root/.ssh/config:ro
+      - ~/.ssh/id_rsa:/root/.ssh/id_rsa:ro
+      - ~/.ssh/id_rsa.pub:/root/.ssh/id_rsa.pub:ro
+      - ~/.ssh/known_hosts:/root/.ssh/known_hosts
+      - ~/.ssh/known_hosts.old:/root/.ssh/known_hosts.old
     working_dir: /repo/user
 
   altivec:

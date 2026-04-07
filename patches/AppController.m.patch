@@ -1,4 +1,221 @@
---- vienna/AppController.m
-+++ vienna/AppController.m
-@@ -52,1 +52,0 @@
+--- vienna/AppController.m	2026-04-05 14:14:13.758946270 +0000
++++ vienna/AppController.m	2026-04-06 21:48:19.683402614 +0000
+@@ -45,13 +45,11 @@
+ #import "Preferences.h"
+ #import "InfoWindow.h"
+ #import "DownloadManager.h"
+-#import "HelperFunctions.h"
+ #import "ArticleFilter.h"
+ #import "ToolbarItem.h"
+ #import "ClickableProgressIndicator.h"
+ #import "SearchPanel.h"
+ #import <WebKit/WebKit.h>
 -#import <Growl/GrowlDefines.h>
+ #include <mach/mach_port.h>
+ #include <mach/mach_interface.h>
+ #include <mach/mach_init.h>
+@@ -423,7 +421,7 @@
+ 	[mainWindow setToolbar:toolbar];
+ 	
+ 	// Give the status bar an embossed look
+-	[[statusText cell] setBackgroundStyle:NSBackgroundStyleRaised];
++	[[statusText cell] XP_setBackgroundStyle:NSBackgroundStyleRaised];
+ 	
+ 	// Preload dictionary of standard URLs
+ 	NSString * pathToPList = [[NSBundle mainBundle] pathForResource:@"StandardURLs.plist" ofType:@""];
+@@ -1086,7 +1084,7 @@
+  */
+ -(void)openURLFromString:(NSString *)urlString inPreferredBrowser:(BOOL)openInPreferredBrowserFlag
+ {
+-	[self openURL:[NSURL URLWithString:urlString] inPreferredBrowser:openInPreferredBrowserFlag];
++	[self openURL:[NSURL XP_URLWithString:urlString] inPreferredBrowser:openInPreferredBrowserFlag];
+ }
+ 
+ /* openURL
+@@ -1140,7 +1138,9 @@
+  */
+ -(IBAction)downloadEnclosure:(id)sender
+ {
+-	for (Article * currentArticle in [mainArticleView markedArticleRange])
++	NSEnumerator * enum_currentArticle = [[mainArticleView markedArticleRange] objectEnumerator];
++	Article * currentArticle;
++	while ((currentArticle = [enum_currentArticle nextObject]))
+ 	{
+ 		if ([currentArticle hasEnclosure])
+ 		{
+@@ -1201,13 +1201,14 @@
+ -(void)loadOpenTabs
+ {
+ 	NSArray * tabLinks = [[Preferences standardPreferences] arrayForKey:MAPref_TabList];
+-	
+-	for (NSString * tabLink in tabLinks)
++
++	NSEnumerator * enum_tabLink = [tabLinks objectEnumerator];
++	NSString * tabLink;
++	while ((tabLink = [enum_tabLink nextObject]))
+ 	{
+-		[self createNewTab:([tabLink length] ? [NSURL URLWithString:tabLink] : nil) inBackground:YES];
++		[self createNewTab:([tabLink length] ? [NSURL XP_URLWithString:tabLink] : nil) inBackground:YES];
+ 	}
+ }
+-
+ /* openVienna
+  * Calls into showMainWindow but activates the app first.
+  */
+@@ -1462,11 +1463,12 @@
+ -(void)initSortMenu
+ {
+ 	NSMenu * sortMenu = [[[NSMenu alloc] initWithTitle:@"Sort By"] autorelease];
+-	
+-	for (Field * field in [db arrayOfFields])
++
++	NSEnumerator * enum_field = [[db arrayOfFields] objectEnumerator];
++	Field * field;
++	while ((field = [enum_field nextObject]))
+ 	{
+-		// Filter out columns we don't sort on. Later we should have an attribute in the
+-		// field object itself based on which columns we can sort on.
++		// Filter out columns we don't sort on. Later we should have an attribute in the		// field object itself based on which columns we can sort on.
+ 		if ([field tag] != MA_FieldID_Parent &&
+ 			[field tag] != MA_FieldID_GUID &&
+ 			[field tag] != MA_FieldID_Comments &&
+@@ -1493,11 +1495,12 @@
+ -(void)initColumnsMenu
+ {
+ 	NSMenu * columnsSubMenu = [[[NSMenu alloc] initWithTitle:@"Columns"] autorelease];
+-	
+-	for (Field * field in [db arrayOfFields])
++
++	NSEnumerator * enum_field = [[db arrayOfFields] objectEnumerator];
++	Field * field;
++	while ((field = [enum_field nextObject]))
+ 	{
+-		// Filter out columns we don't view in the article list. Later we should have an attribute in the
+-		// field object based on which columns are visible in the tableview.
++		// Filter out columns we don't view in the article list. Later we should have an attribute in the		// field object based on which columns are visible in the tableview.
+ 		if ([field tag] != MA_FieldID_Text && 
+ 			[field tag] != MA_FieldID_GUID &&
+ 			[field tag] != MA_FieldID_Comments &&
+@@ -1532,7 +1535,7 @@
+ 	[scriptPathMappings removeAllObjects];
+ 	
+ 	// Add scripts within the app resource
+-	NSString * path = [[[NSBundle mainBundle] sharedSupportPath] stringByAppendingPathComponent:@"Scripts"];
++	NSString * path = [[[[NSBundle mainBundle] resourcePath] stringByDeletingLastPathComponent] stringByAppendingPathComponent:@"SharedSupport/Scripts"];
+ 	loadMapFromPath(path, scriptPathMappings, NO, exts);
+ 	
+ 	// Add scripts that the user created and stored in the scripts folder
+@@ -1700,7 +1703,9 @@
+ 	NSString * lastItem = nil;
+ 	int countOfItems = 0;
+ 
+-	for (id currentItem in sortedMenuItems)
++	NSEnumerator * enum_currentItem = [sortedMenuItems objectEnumerator];
++	id currentItem;
++	while ((currentItem = [enum_currentItem nextObject]))
+ 	{
+ 		// Only add the item if the application is present on the system.
+ 		if ( [[NSWorkspace sharedWorkspace] absolutePathForAppBundleWithIdentifier: [supportedEditors valueForKey:currentItem]] ) 
+@@ -2267,7 +2272,7 @@
+ {
+ 	NSString * stylesPage = [standardURLs valueForKey:@"ViennaMoreStylesPage"];
+ 	if (stylesPage != nil)
+-		[self openURLInDefaultBrowser:[NSURL URLWithString:stylesPage]];
++		[self openURLInDefaultBrowser:[NSURL XP_URLWithString:stylesPage]];
+ }
+ 
+ /* moreScripts
+@@ -2277,7 +2282,7 @@
+ {
+ 	NSString * scriptsPage = [standardURLs valueForKey:@"ViennaMoreScriptsPage"];
+ 	if (scriptsPage != nil)
+-		[self openURLInDefaultBrowser:[NSURL URLWithString:scriptsPage]];
++		[self openURLInDefaultBrowser:[NSURL XP_URLWithString:scriptsPage]];
+ }
+ 
+ /* viewArticlePage
+@@ -2528,10 +2533,11 @@
+  */
+ -(ToolbarItem *)toolbarItemWithIdentifier:(NSString *)theIdentifier
+ {
+-	for (ToolbarItem * theItem in [[mainWindow toolbar] visibleItems])
++	NSEnumerator * enum_theItem = [[[mainWindow toolbar] visibleItems] objectEnumerator];
++	ToolbarItem * theItem;
++	while ((theItem = [enum_theItem nextObject]))
+ 	{
+-		if ([[theItem itemIdentifier] isEqualToString:theIdentifier])
+-			return theItem;
++		if ([[theItem itemIdentifier] isEqualToString:theIdentifier])			return theItem;
+ 	}
+ 	return nil;
+ }
+@@ -2699,9 +2705,10 @@
+  */
+ -(IBAction)showXMLSource:(id)sender
+ {
+-	for (Folder * folder in [foldersTree selectedFolders])
+-	{
+-		if ([folder isRSSFolder])
++	NSEnumerator * enum_folder = [[foldersTree selectedFolders] objectEnumerator];
++	Folder * folder;
++	while ((folder = [enum_folder nextObject]))
++	{		if ([folder isRSSFolder])
+ 		{
+ 			XMLSourceWindow * sourceWindow = [[XMLSourceWindow alloc] initWithFolder:folder];
+ 		
+@@ -3010,7 +3017,7 @@
+ {
+ 	NSString * homePage = [standardURLs valueForKey:@"ViennaHomePage"];
+ 	if (homePage != nil)
+-		[self openURLInDefaultBrowser:[NSURL URLWithString:homePage]];
++		[self openURLInDefaultBrowser:[NSURL XP_URLWithString:homePage]];
+ }
+ 
+ /* showAcknowledgements
+@@ -3022,7 +3029,7 @@
+ 	NSString * pathToAckFile = [thisBundle pathForResource:@"Acknowledgements" ofType:@"html"];
+ 	if (pathToAckFile != nil)
+ 	{
+-		[self createNewTab:[NSURL fileURLWithPath:pathToAckFile isDirectory:NO] inBackground:NO];
++		[self createNewTab:[NSURL XP_fileURLWithPath:pathToAckFile isDirectory:NO] inBackground:NO];
+ 	}
+ }
+ 
+@@ -3330,10 +3337,10 @@
+ 			else
+ 			{
+ 				mailtoLink = [NSMutableString stringWithFormat:@"mailto:?subject=&body="];
+-				for (currentArticle in articleArray)
++				NSEnumerator * enum_currentArticle = [articleArray objectEnumerator];
++				while ((currentArticle = [enum_currentArticle nextObject]))
+ 				{
+-					title = percentEscape([currentArticle title]);
+-					link = percentEscape([currentArticle link]);
++					title = percentEscape([currentArticle title]);					link = percentEscape([currentArticle link]);
+ 					[mailtoLink appendFormat: @"%@%@%@%@%@", title, mailtoLineBreak, link, mailtoLineBreak, mailtoLineBreak];
+ 					CFRelease(title);
+ 					CFRelease(link);
+@@ -3343,7 +3350,7 @@
+ 	}
+ 
+ 	if (mailtoLink != nil)
+-		[self openURLInDefaultBrowser:[NSURL URLWithString: mailtoLink]];
++		[self openURLInDefaultBrowser:[NSURL XP_URLWithString: mailtoLink]];
+ }
+ 
+ /* makeTextSmaller
+@@ -3411,10 +3418,11 @@
+ 	else
+ 	{
+ 		// Get the currently selected articles from the ArticleView and iterate over them.
+-		for (Article * currentArticle in [mainArticleView markedArticleRange])
++		NSEnumerator * enum_currentArticle = [[mainArticleView markedArticleRange] objectEnumerator];
++		Article * currentArticle;
++		while ((currentArticle = [enum_currentArticle nextObject]))
+ 			[self sendBlogEvent:externalEditorBundleIdentifier title:[currentArticle title] url:[currentArticle link] body:[NSApp currentTextSelection] author:[currentArticle author] guid:[currentArticle guid]];
+-	}
+-}
++	}}
+ 
+ /* sendBlogEvent
+  * Send an event to the specified blog editor using the given parameters. Unused parameters should be set to an empty string.

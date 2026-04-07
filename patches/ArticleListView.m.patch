@@ -1,0 +1,144 @@
+--- vienna/ArticleListView.m	2026-04-05 14:14:13.761676290 +0000
++++ vienna/ArticleListView.m	2026-04-06 21:48:19.188076974 +0000
+@@ -29,7 +29,6 @@
+ #import "FoldersTree.h"
+ #import "CalendarExtensions.h"
+ #import "StringExtensions.h"
+-#import "HelperFunctions.h"
+ #import "ArticleRef.h"
+ #import "ArticleFilter.h"
+ #import "XMLParser.h"
+@@ -296,7 +295,9 @@
+ 	// Set up the corner button for chosing the visible columns.
+ 	NSMenu * columnsSubMenu = [[[NSMenu alloc] initWithTitle:@"Columns"] autorelease];
+ 
+-	for (Field * columnField in [db arrayOfFields])
++	NSEnumerator * enum_columnField = [[db arrayOfFields] objectEnumerator];
++	Field * columnField;
++	while ((columnField = [enum_columnField nextObject]))
+ 	{
+ 		// Filter out columns we don't view in the article list. Later we should have an attribute in the
+ 		// field object based on which columns are visible in the tableview.
+@@ -561,16 +562,16 @@
+ 
+ 	// An array we need for the settings
+ 	NSMutableArray * dataArray = [[NSMutableArray alloc] init];
+-	
+ 	// Create the new columns
+-	
+-	for (Field * field in  [[Database sharedDatabase] arrayOfFields])
++
++	NSEnumerator * enum_field = [[[Database sharedDatabase] arrayOfFields] objectEnumerator];
++	Field * field;
++	while ((field = [enum_field nextObject]))
+ 	{
+-		[dataArray addObject:[field name]];
+-		[dataArray addObject:[NSNumber numberWithBool:[field visible]]];
+-		[dataArray addObject:[NSNumber numberWithInt:[field width]]];
+-	}
+-	
++	        [dataArray addObject:[field name]];
++	        [dataArray addObject:[NSNumber numberWithBool:[field visible]]];
++	        [dataArray addObject:[NSNumber numberWithInt:[field width]]];
++	}	
+ 	// Save these to the preferences
+ 	[prefs setObject:dataArray forKey:MAPref_ArticleListColumns];
+ 
+@@ -643,22 +644,24 @@
+  */
+ -(void)showSortDirection
+ {
+-	NSString * sortColumnIdentifier = [articleController sortColumnIdentifier];
+-	
+-	for (NSTableColumn * column in [articleList tableColumns])
+-	{
+-		if ([[column identifier] isEqualToString:sortColumnIdentifier])
+-		{
+-			NSString * imageName = ([[[[Preferences standardPreferences] articleSortDescriptors] objectAtIndex:0] ascending]) ? @"NSAscendingSortIndicator" : @"NSDescendingSortIndicator";
+-			[articleList setHighlightedTableColumn:column];
+-			[articleList setIndicatorImage:[NSImage imageNamed:imageName] inTableColumn:column];
+-		}
+-		else
+-		{
+-			// Remove any existing image in the column header.
+-			[articleList setIndicatorImage:nil inTableColumn:column];
+-		}
+-	}
++        NSString * sortColumnIdentifier = [articleController sortColumnIdentifier];
++
++        NSEnumerator * enum_column = [[articleList tableColumns] objectEnumerator];
++        NSTableColumn * column;
++        while ((column = [enum_column nextObject]))
++        {
++                if ([[column identifier] isEqualToString:sortColumnIdentifier])
++                {
++                        NSString * imageName = ([[[[Preferences standardPreferences] articleSortDescriptors] objectAtIndex:0] ascending]) ? @"NSAscendingSortIndicator" : @"NSDescendingSortIndicator";
++                        [articleList setHighlightedTableColumn:column];
++                        [articleList setIndicatorImage:[NSImage imageNamed:imageName] inTableColumn:column];
++                }
++                else
++                {
++                        // Remove any existing image in the column header.
++                        [articleList setIndicatorImage:nil inTableColumn:column];
++                }
++        }
+ }
+ 
+ /* scrollToArticle
+@@ -667,22 +670,23 @@
+  */
+ -(BOOL)scrollToArticle:(NSString *)guid
+ {
+-	int rowIndex = 0;
+-	BOOL found = NO;
+-	
+-	for (Article * thisArticle in [articleController allArticles])
+-	{
+-		if ([[thisArticle guid] isEqualToString:guid])
+-		{
+-			[self makeRowSelectedAndVisible:rowIndex];
+-			found = YES;
+-			break;
+-		}
+-		++rowIndex;
+-	}
+-	return found;
+-}
++        int rowIndex = 0;
++        BOOL found = NO;
+ 
++        NSEnumerator * enum_thisArticle = [[articleController allArticles] objectEnumerator];
++        Article * thisArticle;
++        while ((thisArticle = [enum_thisArticle nextObject]))
++        {
++                if ([[thisArticle guid] isEqualToString:guid])
++                {
++                        [self makeRowSelectedAndVisible:rowIndex];
++                        found = YES;
++                        break;
++                }
++                ++rowIndex;
++        }
++        return found;
++}
+ /* mainView
+  * Return the primary view of this view.
+  */
+@@ -1368,7 +1372,7 @@
+ 			{
+ 				NSString * linkString = [NSString stringWithFormat:@"%@\n", articleLink];
+ 				NSMutableDictionary * linkLineDictPtr = (isSelectedRow ? selectionDict : linkLineDict);
+-				NSURL * articleURL = [NSURL URLWithString:articleLink];
++				NSURL * articleURL = [NSURL XP_URLWithString:articleLink];
+ 				if (articleURL != nil)
+ 				{
+ 					linkLineDictPtr = [[linkLineDictPtr mutableCopy] autorelease];
+@@ -1560,7 +1564,7 @@
+ 			[pboard setString:msgTitle forType:MA_PBoardType_urln];
+ 			
+ 			// Write the link to the pastboard.
+-			[[NSURL URLWithString:msgLink] writeToPasteboard:pboard];
++			[[NSURL XP_URLWithString:msgLink] writeToPasteboard:pboard];
+ 		}
+ 	}
+ 	

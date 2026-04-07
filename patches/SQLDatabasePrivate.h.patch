@@ -1,0 +1,9 @@
+--- vienna/SQLDatabasePrivate.h	2026-04-05 14:13:19.591391727 +0000
++++ vienna/SQLDatabasePrivate.h	2026-04-06 21:48:19.883548882 +0000
+@@ -31,4 +31,4 @@
+ @interface SQLRow (Private)
+ -(id)initWithColumns:(char**)inColumns rowData:(char**)inRowData columns:(int)inColumnCount;
+ -(BOOL)valid;
+-@end
+\ No newline at end of file
++@end
