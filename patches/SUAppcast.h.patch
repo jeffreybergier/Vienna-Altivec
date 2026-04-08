@@ -1,9 +1,0 @@
---- vienna/Sparkle.framework/Versions/A/Headers/SUAppcast.h	2026-04-05 14:14:13.187539025 +0000
-+++ vienna/Sparkle.framework/Versions/A/Headers/SUAppcast.h	2026-04-06 21:48:19.322182130 +0000
-@@ -24,4 +24,4 @@
- 
- @interface NSObject (SUAppcastDelegate)
- - appcastDidFinishLoading:(SUAppcast *)appcast;
--@end
-\ No newline at end of file
-+@end

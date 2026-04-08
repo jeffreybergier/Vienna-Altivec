@@ -1,5 +1,5 @@
---- vienna/Database.m	2026-04-05 14:13:20.405400166 +0000
-+++ vienna/Database.m	2026-04-06 21:48:19.288647071 +0000
+--- vienna/Database.m	2026-04-07 10:53:55.840446862 +0000
++++ vienna/Database.m	2026-04-07 11:10:02.807769744 +0000
 @@ -239,7 +239,9 @@
  			NSDictionary * demoFeedsDict = [NSDictionary dictionaryWithContentsOfFile:pathToPList];
  			if (demoFeedsDict)
@@ -22,9 +22,9 @@
  			{
  				int folderId = [[row stringForColumn:@"folder_id"] intValue];
  				int parentId = [[row stringForColumn:@"parent_id"] intValue];
-@@ -932,7 +936,8 @@
- 	[[NSNotificationCenter defaultCenter] postNotificationName:@"MA_Notify_WillDeleteFolder" object:[NSNumber numberWithInt:folderId]];
- 	
+@@ -929,7 +933,8 @@
+ 	Folder * folder;
+ 
  	// Recurse and delete child folders
 -	for (folder in arrayOfChildFolders)
 +	NSEnumerator * enum_folder = [arrayOfChildFolders objectEnumerator];
@@ -32,7 +32,7 @@
  		[self wrappedDeleteFolder:[folder itemId]];
  
  	// Adjust unread counts on parents
-@@ -963,13 +968,13 @@
+@@ -960,13 +965,13 @@
  			BOOL isDirectory = YES;
  			if ([[NSFileManager defaultManager] fileExistsAtPath:feedSourceFilePath isDirectory:&isDirectory] && !isDirectory)
  			{
@@ -48,7 +48,27 @@
  			}
  		}
  	}
-@@ -1329,31 +1334,31 @@
+@@ -1031,7 +1036,8 @@
+ 
+ 	// Send the pre-delete notification before we start the transaction so that the handlers can
+ 	// safely do any database access.
+-	for (folder in arrayOfChildFolders)
++	NSEnumerator * enum_childFolders = [arrayOfChildFolders objectEnumerator];
++	while ((folder = [enum_childFolders nextObject]))
+ 	{
+ 		numFolder = [NSNumber numberWithInt:[folder itemId]];
+ 		[arrayOfFolderIds addObject:numFolder];
+@@ -1045,7 +1051,8 @@
+ 
+ 	// Send the post-delete notification after we're finished. Note that the folder actually corresponding to
+ 	// each numFolder won't exist any more and the handlers need to be aware of this.
+-	for (numFolder in arrayOfFolderIds)
++	NSEnumerator * enum_folderIds = [arrayOfFolderIds objectEnumerator];
++	while ((numFolder = [enum_folderIds nextObject]))
+ 		[[NSNotificationCenter defaultCenter] postNotificationName:@"MA_Notify_FolderDeleted" object:numFolder];
+ 	
+ 	return result;
+@@ -1326,31 +1333,31 @@
   * Retrieve a Folder given it's name.
   */
  -(Folder *)folderFromName:(NSString *)wantedName
@@ -86,7 +106,7 @@
  /* handleAutoSortFoldersTreeChange
   * Called when preference changes for sorting folders tree.
   * Store the new method in the database.
-@@ -1654,10 +1659,11 @@
+@@ -1651,10 +1658,11 @@
  		results = [sqlDatabase performQuery:@"select * from smart_folders"];
  		if (results && [results rowCount])
  		{
@@ -101,7 +121,7 @@
  				
  				CriteriaTree * criteriaTree = [[CriteriaTree alloc] initWithString:search_string];
  				[smartfoldersDict setObject:criteriaTree forKey:[NSNumber numberWithInt:folderId]];
-@@ -1742,11 +1748,12 @@
+@@ -1739,11 +1747,12 @@
  		
  		results = [sqlDatabase performQuery:@"select * from folders order by folder_id"];
  		if (results && [results rowCount])
@@ -118,7 +138,7 @@
  				int newItemId = [[row stringForColumn:@"folder_id"] intValue];
  				int newParentId = [[row stringForColumn:@"parent_id"] intValue];
  				int unreadCount = [[row stringForColumn:@"unread_count"] intValue];
-@@ -1779,10 +1786,12 @@
+@@ -1776,10 +1785,12 @@
  		[results release];
  
  		// Load all RSS folders and add them to the list.
@@ -132,8 +152,8 @@
 +			while ((row = [enum_row nextObject]))
  			{
  				int folderId = [[row stringForColumn:@"folder_id"] intValue];
- 				long bloglinesId = [[row stringForColumn:@"bloglines_id"] intValue];
-@@ -1803,12 +1812,13 @@
+ 				NSString * descriptiontext = [row stringForColumn:@"description"];
+@@ -1798,12 +1809,13 @@
  		}
  		[results release];
  
@@ -152,7 +172,7 @@
  				while (parentFolder != nil)
  				{
  					[parentFolder setChildUnreadCount:[parentFolder childUnreadCount] + [folder unreadCount]];
-@@ -1835,14 +1845,15 @@
+@@ -1830,14 +1842,15 @@
  
  	NSMutableArray * newArray = [NSMutableArray array];
  	if (newArray != nil)
@@ -172,7 +192,7 @@
  }
  
  /* arrayOfSubFolders
-@@ -1854,8 +1865,10 @@
+@@ -1849,8 +1862,10 @@
  	if (newArray != nil)
  	{
  		int parentId = [folder itemId];
@@ -185,7 +205,7 @@
  		{
  			if ([item parentId] == parentId)
  			{
-@@ -1864,8 +1877,7 @@
+@@ -1859,8 +1874,7 @@
  				else
  					[newArray addObject:item];
  			}
@@ -195,7 +215,7 @@
  	return [newArray sortedArrayUsingSelector:@selector(folderIDCompare:)];
  }
  
-@@ -1907,7 +1919,8 @@
+@@ -1902,7 +1916,8 @@
  			int unread_count = 0;
  			SQLRow * row;
  
@@ -205,7 +225,7 @@
  			{
  				NSString * guid = [row stringForColumn:@"message_id"];
  				BOOL read_flag = [[row stringForColumn:@"read_flag"] intValue];
-@@ -2022,7 +2035,8 @@
+@@ -2017,7 +2032,8 @@
  	NSMutableString * sqlString = [[NSMutableString alloc] init];
  	int count = 0;
  
@@ -215,7 +235,7 @@
  	{
  		Field * field = [self fieldByName:[criteria field]];
  		NSAssert1(field != nil, @"Criteria field %@ does not have an associated database field", [criteria field]);
-@@ -2217,14 +2231,15 @@
+@@ -2212,14 +2228,15 @@
  			[self verifyThreadSafety];
  			SQLResult * results = [sqlDatabase performQueryWithFormat:@"select message_id from messages where folder_id=%d and read_flag=0", folderId];
  			if (results && [results rowCount])
@@ -235,7 +255,7 @@
  		}
  	}
  	return newArray;
-@@ -2277,10 +2292,11 @@
+@@ -2272,10 +2289,11 @@
          Article * article;
          NSString * text;
  
@@ -251,7 +271,7 @@
  			[article setAuthor:[row stringForColumn:@"sender"]];
  			[article setLink:[row stringForColumn:@"link"]];
  			[article setEnclosure:[row stringForColumn:@"enclosure"]];
-@@ -2336,7 +2352,8 @@
+@@ -2331,7 +2349,8 @@
  	BOOL result = NO;
  
  	// Recurse and mark child folders read too
@@ -261,7 +281,7 @@
  	{
  		if ([self markFolderRead:[folder itemId]])
  			result = YES;
-@@ -2483,7 +2500,9 @@
+@@ -2478,7 +2497,9 @@
  	{
  		if ([results rowCount] > 0)
  		{
@@ -272,7 +292,7 @@
  			{
  				NSString * guid = [row stringForColumn:@"message_id"];
  				if (guid != nil)
-@@ -2491,8 +2510,7 @@
+@@ -2486,8 +2507,7 @@
  					[articleGuids addObject:guid];
  				}
  			}

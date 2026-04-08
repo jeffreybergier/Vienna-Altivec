@@ -1,6 +1,6 @@
---- vienna/XMLSourceWindow.m	2026-04-05 14:13:20.614067339 +0000
-+++ vienna/XMLSourceWindow.m	2026-04-06 21:48:19.949770737 +0000
-@@ -48,7 +48,7 @@
+--- vienna/XMLSourceWindow.m	2026-04-07 10:53:55.919054508 +0000
++++ vienna/XMLSourceWindow.m	2026-04-07 11:10:03.284726397 +0000
+@@ -60,7 +60,7 @@
  	NSString * pathToSyntaxHighlighter = [[NSBundle bundleForClass:[self class]] pathForResource:@"XMLSyntaxHighlighter" ofType:@"html"];
  	if (pathToSyntaxHighlighter != nil)
  	{
@@ -9,7 +9,7 @@
  		if (syntaxHighlighter != nil)
  		{
  			NSString * errorDescription = nil;
-@@ -61,17 +61,17 @@
+@@ -73,17 +73,17 @@
  			{
  				NSStringEncoding encoding;
  				NSError * error;
@@ -34,7 +34,7 @@
  				}
  				else
  					errorDescription = [error localizedDescription];
-@@ -82,7 +82,7 @@
+@@ -94,7 +94,7 @@
  				syntaxHighlighter = [NSString stringWithFormat:@"<html><body><br><br><br><center>%@</center><body></html>", errorDescription];
  			}
  				
@@ -43,3 +43,10 @@
  		}
  	}	
  }
+@@ -161,4 +161,4 @@
+ 	[super dealloc];
+ }
+ 
+-@end
+\ No newline at end of file
++@end

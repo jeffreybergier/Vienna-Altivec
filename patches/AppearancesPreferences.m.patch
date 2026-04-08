@@ -1,5 +1,5 @@
 --- vienna/AppearancesPreferences.m	2026-04-05 14:14:13.759471057 +0000
-+++ vienna/AppearancesPreferences.m	2026-04-06 21:48:19.251371005 +0000
++++ vienna/AppearancesPreferences.m	2026-04-07 11:10:02.771902531 +0000
 @@ -200,4 +200,4 @@
  	[[NSNotificationCenter defaultCenter] removeObserver:self];
  	[super dealloc];

@@ -1,9 +1,0 @@
---- vienna/Sparkle.framework/Versions/A/Headers/SUConstants.h	2026-04-05 14:14:13.822095351 +0000
-+++ vienna/Sparkle.framework/Versions/A/Headers/SUConstants.h	2026-04-06 21:48:19.331920446 +0000
-@@ -17,4 +17,4 @@
- extern NSString *SUExpectsDSASignatureKey;
- extern NSString *SUPublicDSAKeyKey;
- extern NSString *SUAutomaticallyUpdateKey;
--extern NSString *SUAllowsAutomaticUpdatesKey;
-\ No newline at end of file
-+extern NSString *SUAllowsAutomaticUpdatesKey;

@@ -1,7 +1,13 @@
---- vienna/ArrayExtensions.m	2026-04-05 14:14:13.759784263 +0000
-+++ vienna/ArrayExtensions.m	2026-04-06 14:22:38.662527803 +0000
-@@ -1,3 +1,4 @@
-+#import "CrossPlatform.h"
- //
- //  ArrayExtensions.m
- //  Vienna
+--- vienna/ArrayExtensions.m	2026-04-07 10:53:55.831223124 +0000
++++ vienna/ArrayExtensions.m	2026-04-07 11:10:02.673272884 +0000
+@@ -59,8 +59,8 @@
+ 		if ([obj isKindOfClass:[NSArray class]])
+ 		{
+ 			id innerObj;
+-			
+-			for (innerObj in obj)
++			NSEnumerator * enum_innerObj = [obj objectEnumerator];
++			while ((innerObj = [enum_innerObj nextObject]))
+ 				[newArray addObject:innerObj];
+ 			continue;
+ 		}

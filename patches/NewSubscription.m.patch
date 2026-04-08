@@ -1,6 +1,14 @@
---- vienna/NewSubscription.m	2026-04-05 14:14:13.784912271 +0000
-+++ vienna/NewSubscription.m	2026-04-06 21:48:19.300308658 +0000
-@@ -69,12 +69,13 @@
+--- vienna/NewSubscription.m	2026-04-07 13:21:56.008079618 +0000
++++ vienna/NewSubscription.m	2026-04-07 13:46:30.535453446 +0000
+@@ -22,6 +22,7 @@
+ #import "AppController.h"
+ #import "StringExtensions.h"
+ #import "RichXMLParser.h"
++#import "AICURLConnection.h"
+ 
+ // Private functions
+ @interface NewSubscription (Private)
+@@ -69,12 +70,13 @@
  			[feedSource removeAllItems];
  			if (sourcesDict)
  			{
@@ -17,3 +25,12 @@
  	}
  	if (!sourcesDict)
  		[feedSource setEnabled:NO];
+@@ -359,7 +361,7 @@
+ 	// Use this rather than [NSData dataWithContentsOfURL:],
+ 	// because that method will not necessarily unzip gzipped content from server.
+ 	// Thanks to http://www.omnigroup.com/mailman/archive/macosx-dev/2004-March/051547.html
+-	NSData * urlContent = [NSURLConnection sendSynchronousRequest:[NSURLRequest requestWithURL:url] returningResponse:NULL error:NULL];
++	NSData * urlContent = [AICURLConnection sendSynchronousRequest:[NSURLRequest requestWithURL:url] returningResponse:NULL error:NULL];
+ 	if (urlContent == nil)
+ 		return feedURLString;
+ 

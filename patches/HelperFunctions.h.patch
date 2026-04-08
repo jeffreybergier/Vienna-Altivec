@@ -1,7 +1,0 @@
---- vienna/HelperFunctions.h	2026-04-05 14:14:13.780788388 +0000
-+++ vienna/HelperFunctions.h	2026-04-06 21:48:19.004263104 +0000
-@@ -46,3 +46,4 @@
- NSString * getDefaultBrowser(void);
- BOOL hasOSScriptsMenu(void);
- OSStatus GotoHelpPage(CFStringRef pagePath, CFStringRef anchorName);
-+

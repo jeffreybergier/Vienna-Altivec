@@ -1,0 +1,9 @@
+--- vienna/ProgressTextCell.m	2026-04-07 13:09:04.221345436 +0000
++++ vienna/ProgressTextCell.m	2026-04-07 13:11:21.545021004 +0000
+@@ -146,4 +146,4 @@
+ 	[super drawInteriorWithFrame:cellFrame inView:controlView];
+ }
+ 
+-@end
+\ No newline at end of file
++@end

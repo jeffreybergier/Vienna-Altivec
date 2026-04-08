@@ -1,6 +1,6 @@
---- vienna/ArticleController.m	2026-04-05 14:14:13.760705547 +0000
-+++ vienna/ArticleController.m	2026-04-06 21:48:19.210152356 +0000
-@@ -388,7 +388,9 @@
+--- vienna/ArticleController.m	2026-04-07 13:09:04.203361863 +0000
++++ vienna/ArticleController.m	2026-04-07 13:11:21.655664467 +0000
+@@ -428,7 +428,9 @@
  	// flag on the article while simultaneously removing it from our copies
  	Database * db = [Database sharedDatabase];
  	[db beginTransaction];
@@ -11,7 +11,7 @@
  	{
  		if (![theArticle isRead])
  			needFolderRedraw = YES;
-@@ -448,7 +450,9 @@
+@@ -488,7 +490,9 @@
  	Database * db = [Database sharedDatabase];
  
  	[db beginTransaction];
@@ -22,7 +22,7 @@
  	{
  		if (![theArticle isRead])
  			needFolderRedraw = YES;
-@@ -457,8 +461,7 @@
+@@ -497,8 +501,7 @@
  			[currentArrayCopy removeObject:theArticle];
  			[folderArrayCopy removeObject:theArticle];
  		}
@@ -32,7 +32,7 @@
  	[currentArrayOfArticles autorelease];
  	currentArrayOfArticles = currentArrayCopy;
  	[folderArrayOfArticles autorelease];
-@@ -509,14 +512,15 @@
+@@ -549,14 +552,15 @@
  	SEL markFlagUndoAction = flagged ? @selector(markUnflagUndo:) : @selector(markFlagUndo:);
  	[undoManager registerUndoWithTarget:self selector:markFlagUndoAction object:articleArray];
  	[undoManager setActionName:NSLocalizedString(@"Flag", nil)];
@@ -52,7 +52,7 @@
  	[mainArticleView refreshFolder:MA_Refresh_RedrawList];
  }
  
-@@ -569,8 +573,10 @@
+@@ -609,8 +613,10 @@
  {
  	Database * db = [Database sharedDatabase];
  	int lastFolderId = -1;
@@ -65,7 +65,7 @@
  	{
  		int folderId = [theArticle folderId];
  		[db markArticleRead:folderId guid:[theArticle guid] isRead:readFlag];
-@@ -578,8 +584,7 @@
+@@ -618,8 +624,7 @@
  		if (folderId != lastFolderId && lastFolderId != -1)
  			[foldersTree updateFolder:lastFolderId recurseToParents:YES];
  		lastFolderId = folderId;
@@ -75,7 +75,7 @@
  		[foldersTree updateFolder:lastFolderId recurseToParents:YES];
  }
  
-@@ -616,11 +621,13 @@
+@@ -656,11 +661,13 @@
  		NSUndoManager * undoManager = [[NSApp mainWindow] undoManager];
  		[undoManager registerUndoWithTarget:self selector:@selector(markAllReadUndo:) object:refArray];
  		[undoManager setActionName:NSLocalizedString(@"Mark All Read", nil)];
@@ -93,7 +93,7 @@
  	}
  	if (refreshFlag)
  		[mainArticleView refreshFolder:MA_Refresh_RedrawList];
-@@ -635,8 +642,10 @@
+@@ -675,8 +682,10 @@
  {
  	NSMutableArray * refArray = [NSMutableArray array];
  	Database * db = [Database sharedDatabase];
@@ -106,7 +106,7 @@
  	{
  		int folderId = [folder itemId];
  		if (IsGroupFolder(folder) && undoFlag)
-@@ -645,8 +654,7 @@
+@@ -685,8 +694,7 @@
  		}
  		else if (IsRSSFolder(folder))
  		{
@@ -116,7 +116,7 @@
  			if ([db markFolderRead:folderId])
  			{
  				[foldersTree updateFolder:folderId recurseToParents:YES];
-@@ -665,7 +673,6 @@
+@@ -705,7 +713,6 @@
  	}
  	return refArray;
  }
@@ -124,7 +124,7 @@
  /* currentCacheContainsFolder
   * Scans the current article cache to determine if any article is a member of the specified
   * folder and returns YES if so.
-@@ -692,16 +699,18 @@
+@@ -732,16 +739,18 @@
  {
  	Database * db = [Database sharedDatabase];
  	int lastFolderId = -1;
@@ -146,7 +146,7 @@
  	{
  		int folderId = [ref folderId];
  		[db markArticleRead:folderId guid:[ref guid] isRead:readFlag];
-@@ -709,23 +718,26 @@
+@@ -749,23 +758,26 @@
  		{
  			[foldersTree updateFolder:lastFolderId recurseToParents:YES];
  			if (lastFolderId == currentFolderId)

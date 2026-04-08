@@ -1,5 +1,5 @@
---- vienna/HelperFunctions.m	2026-04-05 14:14:13.781054010 +0000
-+++ vienna/HelperFunctions.m	2026-04-06 21:48:19.922483937 +0000
+--- vienna/HelperFunctions.m	2026-04-07 10:53:55.844962482 +0000
++++ vienna/HelperFunctions.m	2026-04-07 11:10:03.262045798 +0000
 @@ -17,7 +17,6 @@
  //  See the License for the specific language governing permissions and
  // 
@@ -7,8 +7,8 @@
 -#import "HelperFunctions.h"
  #import <SystemConfiguration/SCNetworkReachability.h>
  #import <Carbon/Carbon.h>
- 
-@@ -47,7 +46,7 @@
+ #import <WebKit/WebKit.h>
+@@ -48,7 +47,7 @@
   */
  NSString * getDefaultBrowser(void)
  {
@@ -17,7 +17,7 @@
  	NSString * registeredAppURL = nil;
  	CFURLRef appURL = nil;
  
-@@ -109,11 +108,12 @@
+@@ -172,11 +171,12 @@
  	{
  		if (validExtensions)
  			arrayOfFiles = [arrayOfFiles pathsMatchingExtensions:validExtensions];
@@ -34,7 +34,7 @@
  			
  			if ([fileManager fileExistsAtPath:fullPath isDirectory:&isDirectory] && (isDirectory == foldersOnly))
  			{
-@@ -132,7 +132,7 @@
+@@ -195,7 +195,7 @@
  BOOL isAccessible(NSString * urlString)
  {
  	SCNetworkConnectionFlags flags;
@@ -43,7 +43,7 @@
  	
  	if (!SCNetworkCheckReachabilityByName([[url host] UTF8String], &flags))
  		return NO;
-@@ -238,3 +238,4 @@
+@@ -301,3 +301,4 @@
  		err = AHGotoPage(myBookName, pagePath, anchorName);
  	return err;
  }

@@ -1,6 +1,6 @@
---- vienna/AppController.m	2026-04-05 14:14:13.758946270 +0000
-+++ vienna/AppController.m	2026-04-06 21:48:19.683402614 +0000
-@@ -45,13 +45,11 @@
+--- vienna/AppController.m	2026-04-07 13:09:04.201271845 +0000
++++ vienna/AppController.m	2026-04-07 13:11:22.115287010 +0000
+@@ -46,15 +46,12 @@
  #import "Preferences.h"
  #import "InfoWindow.h"
  #import "DownloadManager.h"
@@ -9,21 +9,64 @@
  #import "ToolbarItem.h"
  #import "ClickableProgressIndicator.h"
  #import "SearchPanel.h"
+ #import "SearchMethod.h"
+-#import <Sparkle/Sparkle.h>
  #import <WebKit/WebKit.h>
 -#import <Growl/GrowlDefines.h>
  #include <mach/mach_port.h>
  #include <mach/mach_interface.h>
  #include <mach/mach_init.h>
-@@ -423,7 +421,7 @@
+@@ -458,8 +455,8 @@
  	[mainWindow setToolbar:toolbar];
  	
- 	// Give the status bar an embossed look
+ 	// Give the status bar and filter string an embossed look
 -	[[statusText cell] setBackgroundStyle:NSBackgroundStyleRaised];
+-	[[currentFilterTextField cell] setBackgroundStyle:NSBackgroundStyleRaised];
 +	[[statusText cell] XP_setBackgroundStyle:NSBackgroundStyleRaised];
++	[[currentFilterTextField cell] XP_setBackgroundStyle:NSBackgroundStyleRaised];
+ 	[currentFilterTextField setStringValue:@""];
  	
  	// Preload dictionary of standard URLs
- 	NSString * pathToPList = [[NSBundle mainBundle] pathForResource:@"StandardURLs.plist" ofType:@""];
-@@ -1086,7 +1084,7 @@
+@@ -777,28 +774,30 @@
+ 
+ 	[cellMenu addItem: [NSMenuItem separatorItem]];
+ 
+-	// Add all built-in search methods to the menu. 
+-	for (searchMethod in [SearchMethod builtInSearchMethods])
++	// Add all built-in search methods to the menu.
++	NSEnumerator * enum_builtIn = [[SearchMethod builtInSearchMethods] objectEnumerator];
++	while ((searchMethod = [enum_builtIn nextObject]))
+ 	{
+ 		friendlyName = [searchMethod friendlyName];
+ 		item = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(friendlyName, nil) action:@selector(setSearchMethod:) keyEquivalent:@""];
+ 		[item setRepresentedObject: searchMethod];
+-		
++
+ 		// Is this the currently set search method? If yes, mark it as such.
+ 		if ( [friendlyName isEqualToString:[[[Preferences standardPreferences] searchMethod] friendlyName]] )
+ 			[item setState:NSOnState];
+-		
++
+ 		[cellMenu addItem:item];
+ 		[item release];
+ 	}
+-	
++
+ 	// Add all available plugged-in search methods to the menu.
+ 	NSMutableArray * searchMethods = [NSMutableArray arrayWithArray:[pluginManager searchMethods]];
+ 	if ([searchMethods count] > 0)
+-	{	
++	{
+ 		[cellMenu addItem: [NSMenuItem separatorItem]];
+-		
+-		for (searchMethod in searchMethods)
++
++		NSEnumerator * enum_searchMethods = [searchMethods objectEnumerator];
++		while ((searchMethod = [enum_searchMethods nextObject]))
+ 		{
+ 			if (![searchMethod friendlyName]) 
+ 				continue;
+@@ -1218,7 +1217,7 @@
   */
  -(void)openURLFromString:(NSString *)urlString inPreferredBrowser:(BOOL)openInPreferredBrowserFlag
  {
@@ -32,7 +75,7 @@
  }
  
  /* openURL
-@@ -1140,7 +1138,9 @@
+@@ -1272,7 +1271,9 @@
   */
  -(IBAction)downloadEnclosure:(id)sender
  {
@@ -43,7 +86,7 @@
  	{
  		if ([currentArticle hasEnclosure])
  		{
-@@ -1201,13 +1201,14 @@
+@@ -1333,13 +1334,14 @@
  -(void)loadOpenTabs
  {
  	NSArray * tabLinks = [[Preferences standardPreferences] arrayForKey:MAPref_TabList];
@@ -62,24 +105,18 @@
  /* openVienna
   * Calls into showMainWindow but activates the app first.
   */
-@@ -1462,11 +1463,12 @@
- -(void)initSortMenu
- {
- 	NSMenu * sortMenu = [[[NSMenu alloc] initWithTitle:@"Sort By"] autorelease];
--	
+@@ -1596,7 +1598,9 @@
+ 	NSMenu * sortSubmenu = [[[NSMenu alloc] initWithTitle:@"Sort By"] autorelease];
+ 	
+ 	// Add the fields which are sortable to the menu.
 -	for (Field * field in [db arrayOfFields])
-+
-+	NSEnumerator * enum_field = [[db arrayOfFields] objectEnumerator];
++	NSEnumerator * enum_sortFields = [[db arrayOfFields] objectEnumerator];
 +	Field * field;
-+	while ((field = [enum_field nextObject]))
++	while ((field = [enum_sortFields nextObject]))
  	{
--		// Filter out columns we don't sort on. Later we should have an attribute in the
--		// field object itself based on which columns we can sort on.
-+		// Filter out columns we don't sort on. Later we should have an attribute in the		// field object itself based on which columns we can sort on.
- 		if ([field tag] != MA_FieldID_Parent &&
- 			[field tag] != MA_FieldID_GUID &&
- 			[field tag] != MA_FieldID_Comments &&
-@@ -1493,11 +1495,12 @@
+ 		// Filter out columns we don't sort on. Later we should have an attribute in the
+ 		// field object itself based on which columns we can sort on.
+@@ -1641,11 +1645,12 @@
  -(void)initColumnsMenu
  {
  	NSMenu * columnsSubMenu = [[[NSMenu alloc] initWithTitle:@"Columns"] autorelease];
@@ -96,7 +133,7 @@
  		if ([field tag] != MA_FieldID_Text && 
  			[field tag] != MA_FieldID_GUID &&
  			[field tag] != MA_FieldID_Comments &&
-@@ -1532,7 +1535,7 @@
+@@ -1680,7 +1685,7 @@
  	[scriptPathMappings removeAllObjects];
  	
  	// Add scripts within the app resource
@@ -105,18 +142,7 @@
  	loadMapFromPath(path, scriptPathMappings, NO, exts);
  	
  	// Add scripts that the user created and stored in the scripts folder
-@@ -1700,7 +1703,9 @@
- 	NSString * lastItem = nil;
- 	int countOfItems = 0;
- 
--	for (id currentItem in sortedMenuItems)
-+	NSEnumerator * enum_currentItem = [sortedMenuItems objectEnumerator];
-+	id currentItem;
-+	while ((currentItem = [enum_currentItem nextObject]))
- 	{
- 		// Only add the item if the application is present on the system.
- 		if ( [[NSWorkspace sharedWorkspace] absolutePathForAppBundleWithIdentifier: [supportedEditors valueForKey:currentItem]] ) 
-@@ -2267,7 +2272,7 @@
+@@ -2378,7 +2383,7 @@
  {
  	NSString * stylesPage = [standardURLs valueForKey:@"ViennaMoreStylesPage"];
  	if (stylesPage != nil)
@@ -125,7 +151,7 @@
  }
  
  /* moreScripts
-@@ -2277,7 +2282,7 @@
+@@ -2388,7 +2393,7 @@
  {
  	NSString * scriptsPage = [standardURLs valueForKey:@"ViennaMoreScriptsPage"];
  	if (scriptsPage != nil)
@@ -133,8 +159,24 @@
 +		[self openURLInDefaultBrowser:[NSURL XP_URLWithString:scriptsPage]];
  }
  
- /* viewArticlePage
-@@ -2528,10 +2533,11 @@
+ /* viewArticlePages inPreferredBrowser
+@@ -2409,12 +2414,13 @@
+         NSMutableArray * articlesWithLinks = [NSMutableArray arrayWithCapacity:[articleArray count]];
+         NSMutableArray * urls = [NSMutableArray arrayWithCapacity:[articleArray count]];
+ 		
+-		for (currentArticle in articleArray)
++		NSEnumerator * enum_articles = [articleArray objectEnumerator];
++		while ((currentArticle = [enum_articles nextObject]))
+ 		{
+ 			if (currentArticle && ![[currentArticle link] isBlank])
+             {
+                 [articlesWithLinks addObject:currentArticle];
+-				[urls addObject:[NSURL URLWithString:[currentArticle link]]];
++				[urls addObject:[NSURL XP_URLWithString:[currentArticle link]]];
+             }
+ 		}
+ 		
+@@ -2749,10 +2755,11 @@
   */
  -(ToolbarItem *)toolbarItemWithIdentifier:(NSString *)theIdentifier
  {
@@ -149,7 +191,7 @@
  	}
  	return nil;
  }
-@@ -2699,9 +2705,10 @@
+@@ -2920,9 +2927,10 @@
   */
  -(IBAction)showXMLSource:(id)sender
  {
@@ -162,8 +204,8 @@
 +	{		if ([folder isRSSFolder])
  		{
  			XMLSourceWindow * sourceWindow = [[XMLSourceWindow alloc] initWithFolder:folder];
- 		
-@@ -3010,7 +3017,7 @@
+ 			
+@@ -3293,7 +3301,7 @@
  {
  	NSString * homePage = [standardURLs valueForKey:@"ViennaHomePage"];
  	if (homePage != nil)
@@ -172,7 +214,7 @@
  }
  
  /* showAcknowledgements
-@@ -3022,7 +3029,7 @@
+@@ -3305,7 +3313,7 @@
  	NSString * pathToAckFile = [thisBundle pathForResource:@"Acknowledgements" ofType:@"html"];
  	if (pathToAckFile != nil)
  	{
@@ -181,7 +223,36 @@
  	}
  }
  
-@@ -3330,10 +3337,10 @@
+@@ -3423,7 +3431,9 @@
+ 		// If the current view is a browser view and "Search all articles" is the current SearchMethod, switch to "Search current webpage"
+ 		if ([[[prefs searchMethod] friendlyName] isEqualToString:[[SearchMethod searchAllArticlesMethod] friendlyName]])
+ 		{
+-			for (NSMenuItem * menuItem in [[[searchField cell] searchMenuTemplate] itemArray])
++			NSEnumerator * enum_menuItems1 = [[[[searchField cell] searchMenuTemplate] itemArray] objectEnumerator];
++			NSMenuItem * menuItem;
++			while ((menuItem = [enum_menuItems1 nextObject]))
+ 			{
+ 				if ([[[menuItem representedObject] friendlyName] isEqualToString:[[SearchMethod searchCurrentWebPageMethod] friendlyName]])
+ 				{
+@@ -3438,12 +3448,14 @@
+ 		// If the current view is anything else "Search current webpage" is active, switch to "Search all articles".
+ 		if ([[[prefs searchMethod] friendlyName] isEqualToString:[[SearchMethod searchCurrentWebPageMethod] friendlyName]])
+ 		{
+-			for (NSMenuItem * menuItem in [[[searchField cell] searchMenuTemplate] itemArray])
++			NSEnumerator * enum_menuItems2 = [[[[searchField cell] searchMenuTemplate] itemArray] objectEnumerator];
++			NSMenuItem * menuItem2;
++			while ((menuItem2 = [enum_menuItems2 nextObject]))
+ 			{
+-				if ([[[menuItem representedObject] friendlyName] isEqualToString:[[SearchMethod searchAllArticlesMethod] friendlyName]])
++				if ([[[menuItem2 representedObject] friendlyName] isEqualToString:[[SearchMethod searchAllArticlesMethod] friendlyName]])
+ 				{
+ 					[[searchField cell] setPlaceholderString:NSLocalizedString([[SearchMethod searchAllArticlesMethod] friendlyName], nil)];
+-					[[Preferences standardPreferences] setSearchMethod: [menuItem representedObject]];
++					[[Preferences standardPreferences] setSearchMethod: [menuItem2 representedObject]];
+ 				}
+ 			}
+ 		}
+@@ -3677,10 +3689,10 @@
  			else
  			{
  				mailtoLink = [NSMutableString stringWithFormat:@"mailto:?subject=&body="];
@@ -195,16 +266,16 @@
  					[mailtoLink appendFormat: @"%@%@%@%@%@", title, mailtoLineBreak, link, mailtoLineBreak, mailtoLineBreak];
  					CFRelease(title);
  					CFRelease(link);
-@@ -3343,7 +3350,7 @@
+@@ -3690,7 +3702,7 @@
  	}
- 
+ 	
  	if (mailtoLink != nil)
 -		[self openURLInDefaultBrowser:[NSURL URLWithString: mailtoLink]];
 +		[self openURLInDefaultBrowser:[NSURL XP_URLWithString: mailtoLink]];
  }
  
  /* makeTextSmaller
-@@ -3411,10 +3418,11 @@
+@@ -3747,10 +3759,11 @@
  	else
  	{
  		// Get the currently selected articles from the ArticleView and iterate over them.
@@ -219,3 +290,10 @@
  
  /* sendBlogEvent
   * Send an event to the specified blog editor using the given parameters. Unused parameters should be set to an empty string.
+@@ -4555,4 +4568,4 @@
+ 	[searchString release];
+ 	[super dealloc];
+ }
+-@end
+\ No newline at end of file
++@end

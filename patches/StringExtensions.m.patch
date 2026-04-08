@@ -1,5 +1,5 @@
---- vienna/StringExtensions.m	2026-04-05 14:14:13.862011450 +0000
-+++ vienna/StringExtensions.m	2026-04-06 21:48:19.469170878 +0000
+--- vienna/StringExtensions.m	2026-04-07 10:53:55.910594387 +0000
++++ vienna/StringExtensions.m	2026-04-07 11:10:02.989800946 +0000
 @@ -42,7 +42,7 @@
  	baseURL = [baseURL stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
  	if (baseURL == nil)
@@ -7,18 +7,18 @@
 -	NSURL * imgBaseURL = [NSURL URLWithString:baseURL];
 +	NSURL * imgBaseURL = [NSURL XP_URLWithString:baseURL];
  	
- 	int textLength = [self length];
+ 	unsigned int textLength = [self length];
  	NSRange srchRange;
-@@ -69,7 +69,7 @@
- 			NSString * srcPath = [[self substringWithRange:srcRange] stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
- 			if (srcPath && ![srcPath hasPrefix:@"http://"])
- 			{
--				NSURL * imgURL = [NSURL URLWithString:srcPath relativeToURL:imgBaseURL];
-+				NSURL * imgURL = [NSURL XP_URLWithString:srcPath relativeToURL:imgBaseURL];
- 				if (imgURL != nil)
+@@ -72,7 +72,7 @@
+ 				NSString * escapedSrcPath = [srcPath stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+ 				if (escapedSrcPath != nil)
  				{
- 					srcPath = [imgURL absoluteString];
-@@ -588,7 +588,7 @@
+-					NSURL * imgURL = [NSURL URLWithString:escapedSrcPath relativeToURL:imgBaseURL];
++					NSURL * imgURL = [NSURL XP_URLWithString:escapedSrcPath relativeToURL:imgBaseURL];
+ 					if (imgURL != nil)
+ 					{
+ 						srcPath = [imgURL absoluteString];
+@@ -592,7 +592,7 @@
   */
  -(NSString *)baseURL
  {

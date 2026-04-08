@@ -1,14 +1,14 @@
---- vienna/Preferences.m	2026-04-05 14:13:20.451584215 +0000
-+++ vienna/Preferences.m	2026-04-06 21:48:20.046385626 +0000
-@@ -21,7 +21,6 @@
- #import "Preferences.h"
+--- vienna/Preferences.m	2026-04-07 13:09:04.220368053 +0000
++++ vienna/Preferences.m	2026-04-07 13:11:22.302820476 +0000
+@@ -22,7 +22,6 @@
  #import "Constants.h"
  #import "Message.h"
+ #import "SearchMethod.h"
 -#import <Sparkle/Sparkle.h>
  
  // Initial paths
  NSString * MA_ApplicationSupportFolder = @"~/Library/Application Support/Vienna";
-@@ -1006,7 +1005,7 @@
+@@ -1039,7 +1038,7 @@
  	if (![[NSFileManager defaultManager] fileExistsAtPath:feedSourcesFolder isDirectory:&isDirectory])
  	{
  		NSError * error = nil;

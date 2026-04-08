@@ -1,5 +1,5 @@
---- vienna/FoldersTree.m	2026-04-05 14:14:13.776380589 +0000
-+++ vienna/FoldersTree.m	2026-04-06 21:48:19.543725885 +0000
+--- vienna/FoldersTree.m	2026-04-07 13:09:04.212992030 +0000
++++ vienna/FoldersTree.m	2026-04-07 13:11:21.977295725 +0000
 @@ -23,7 +23,6 @@
  #import "AppController.h"
  #import "Constants.h"
@@ -8,7 +8,7 @@
  #import "StringExtensions.h"
  #import "FolderView.h"
  #import "PopupButton.h"
-@@ -248,10 +247,11 @@
+@@ -243,10 +242,11 @@
   */
  -(void)unarchiveState:(NSArray *)stateArray
  {
@@ -23,7 +23,7 @@
  		if (node != nil)
  		{
  			BOOL doExpandItem = [[dict valueForKey:@"ExpandedState"] boolValue];
-@@ -280,10 +280,10 @@
+@@ -275,10 +275,10 @@
  	Folder * folder;
  	if ([[Preferences standardPreferences] foldersTreeSortMethod] != MA_FolderSort_Manual)
  	{
@@ -37,7 +37,7 @@
  			int count = [listOfSubFolders count];
  			TreeNode * subNode;
  
-@@ -1126,7 +1126,7 @@
+@@ -1150,7 +1150,7 @@
  			[stringDragData appendString:feedURL];
  			[stringDragData appendString:@"\n"];
  			
@@ -46,7 +46,7 @@
  			if (safariURL != nil && ![safariURL isFileURL])
  			{
  				if (![@"feed" isEqualToString:[safariURL scheme]])
-@@ -1417,7 +1417,7 @@
+@@ -1441,7 +1441,7 @@
  			[db beginTransaction];
  			NSString * feedTitle = [arrayOfTitles objectAtIndex:index];
  			NSString * feedURL = [arrayOfURLs objectAtIndex:index];

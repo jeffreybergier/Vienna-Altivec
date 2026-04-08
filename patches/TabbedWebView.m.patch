@@ -1,6 +1,6 @@
---- vienna/TabbedWebView.m	2026-04-05 14:14:13.269324291 +0000
-+++ vienna/TabbedWebView.m	2026-04-06 21:48:19.233676234 +0000
-@@ -169,7 +169,7 @@
+--- vienna/TabbedWebView.m	2026-04-07 10:53:55.912601741 +0000
++++ vienna/TabbedWebView.m	2026-04-07 13:11:21.683859504 +0000
+@@ -172,7 +172,7 @@
  		// Indicate a redirect for a feed
  		[self setIsFeedRedirect:YES];
  

@@ -1,0 +1,20 @@
+--- vienna/BitlyAPIHelper.m	2026-04-07 13:21:55.964555994 +0000
++++ vienna/BitlyAPIHelper.m	2026-04-07 13:46:31.209079180 +0000
+@@ -20,7 +20,7 @@
+ 
+ #import "BitlyAPIHelper.h"
+ #import "XMLParser.h"
+-#import "HelperFunctions.h"
++#import "AICURLConnection.h"
+ 
+ // bit.ly defaults to delivering results via JSON, but we want to use XML here, that's why whe use &format=xml
+ static NSString * BitlyApiBaseUrl = @"http://api.bit.ly/%@?version=2.0.1&login=%@&apiKey=%@&format=xml&";
+@@ -54,7 +54,7 @@
+ 	// ... which is then finally sent to bit.ly's servers.
+ 	NSHTTPURLResponse* urlResponse = nil;  	
+ 	NSError *error = [[[NSError alloc] init] autorelease];  
+-	NSData * data = [NSURLConnection sendSynchronousRequest:request returningResponse:&urlResponse error:&error];	
++	NSData * data = [AICURLConnection sendSynchronousRequest:request returningResponse:&urlResponse error:&error];
+ 	
+ 	// If the response is OK, use Vienna's XML parser stuff to get the data we need.
+ 	if ([urlResponse statusCode] >= 200 && [urlResponse statusCode] < 300)

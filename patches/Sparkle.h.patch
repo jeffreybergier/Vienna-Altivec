@@ -1,9 +1,0 @@
---- vienna/Sparkle.framework/Versions/A/Headers/Sparkle.h	2026-04-05 14:13:20.497735098 +0000
-+++ vienna/Sparkle.framework/Versions/A/Headers/Sparkle.h	2026-04-06 21:48:19.372247790 +0000
-@@ -19,4 +19,4 @@
- 
- #import "NSApplication+AppCopies.h"
- #import "NSFileManager+Authentication.h"
--#import "NSFileManager+Verification.h"
-\ No newline at end of file
-+#import "NSFileManager+Verification.h"

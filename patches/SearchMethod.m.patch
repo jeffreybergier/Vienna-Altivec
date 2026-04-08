@@ -1,0 +1,10 @@
+--- vienna/SearchMethod.m	2026-04-07 10:53:55.867230168 +0000
++++ vienna/SearchMethod.m	2026-04-07 11:10:03.502954308 +0000
+@@ -20,7 +20,6 @@
+ 
+ 
+ #import "SearchMethod.h"
+-#import "HelperFunctions.h"
+ #import "AppController.h"
+ 
+ @implementation SearchMethod

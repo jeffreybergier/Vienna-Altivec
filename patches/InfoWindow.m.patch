@@ -1,6 +1,6 @@
---- vienna/InfoWindow.m	2026-04-05 14:14:13.782019711 +0000
-+++ vienna/InfoWindow.m	2026-04-06 21:48:19.503669657 +0000
-@@ -302,7 +302,7 @@
+--- vienna/InfoWindow.m	2026-04-07 13:09:04.215438093 +0000
++++ vienna/InfoWindow.m	2026-04-07 13:11:21.940302653 +0000
+@@ -318,7 +318,7 @@
  		NSString * url = [[urlField stringValue] trim];
  		
  		// Escape any special query characters in the URL, because the URL itself will be in a query.

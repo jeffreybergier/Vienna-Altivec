@@ -1,0 +1,66 @@
+--- vienna/PluginManager.m	2026-04-07 10:53:55.852584570 +0000
++++ vienna/PluginManager.m	2026-04-07 11:10:02.972756747 +0000
+@@ -19,7 +19,6 @@
+ //
+ 
+ #import "PluginManager.h"
+-#import "HelperFunctions.h"
+ #import "StringExtensions.h"
+ #import "AppController.h"
+ #import "Preferences.h"
+@@ -69,7 +68,8 @@
+ 	path = [[Preferences standardPreferences] pluginsFolder];
+ 	loadMapFromPath(path, pluginPaths, YES, nil);
+ 
+-	for (pluginName in pluginPaths)
++	NSEnumerator * enum_pluginPaths = [pluginPaths keyEnumerator];
++	while ((pluginName = [enum_pluginPaths nextObject]))
+ 	{
+ 		NSString * pluginPath = [pluginPaths objectForKey:pluginName];
+ 		[self loadPlugin:pluginPath];
+@@ -168,8 +168,9 @@
+ 				NSArray * keyArray = [menuKey componentsSeparatedByString:@"+"];
+ 				NSString * oneKey;
+ 				
+-				for (oneKey in keyArray)
+-				{
++				NSEnumerator * enum_keyArray = [keyArray objectEnumerator];
++			while ((oneKey = [enum_keyArray nextObject]))
++			{
+ 					if ([oneKey isEqualToString:@"Cmd"])
+ 						keyMod |= NSCommandKeyMask;
+ 					else if ([oneKey isEqualToString:@"Shift"])
+@@ -223,7 +224,9 @@
+ -(NSArray *)searchMethods
+ {
+ 	NSMutableArray * searchMethods = [NSMutableArray arrayWithCapacity:[allPlugins count]];
+-	for (NSDictionary * plugin in [allPlugins allValues])
++	NSEnumerator * enum_allPlugins = [[allPlugins allValues] objectEnumerator];
++	NSDictionary * plugin;
++	while ((plugin = [enum_allPlugins nextObject]))
+ 	{
+ 		if ([[plugin valueForKey:@"Type"] isEqualToString:@"SearchEngine"])
+ 		{
+@@ -242,8 +245,9 @@
+ {
+ 	NSMutableArray * toolbarKeys = [NSMutableArray arrayWithCapacity:[allPlugins count]];
+ 	NSString * pluginName;
+-	NSString * pluginType;	
+-	for (pluginName in allPlugins)
++	NSString * pluginType;
++	NSEnumerator * enum_toolbarPlugins = [allPlugins keyEnumerator];
++	while ((pluginName = [enum_toolbarPlugins nextObject]))
+ 	{
+ 		NSDictionary * onePlugin = [allPlugins objectForKey:pluginName];
+ 		pluginType = [onePlugin objectForKey:@"Type"];
+@@ -260,8 +264,8 @@
+ {
+ 	NSMutableArray * newArray = [NSMutableArray arrayWithCapacity:[allPlugins count]];
+ 	NSString * pluginName;
+-
+-	for (pluginName in allPlugins)
++	NSEnumerator * enum_defaultPlugins = [allPlugins keyEnumerator];
++	while ((pluginName = [enum_defaultPlugins nextObject]))
+ 	{
+ 		NSDictionary * onePlugin = [allPlugins objectForKey:pluginName];
+ 		if ([[onePlugin objectForKey:@"Default"] intValue])

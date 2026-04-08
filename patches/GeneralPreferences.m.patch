@@ -1,5 +1,5 @@
 --- vienna/GeneralPreferences.m	2026-04-05 14:14:13.777324915 +0000
-+++ vienna/GeneralPreferences.m	2026-04-06 21:48:19.610357518 +0000
++++ vienna/GeneralPreferences.m	2026-04-07 13:11:22.050307736 +0000
 @@ -134,7 +134,7 @@
  	NSBundle * appBundle = [NSBundle mainBundle];
  	NSString * ourAppName = [[[appBundle executablePath] lastPathComponent] stringByDeletingPathExtension];
