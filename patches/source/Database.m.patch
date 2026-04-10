@@ -1,5 +1,5 @@
---- vienna/Database.m	2026-04-07 10:53:55.840446862 +0000
-+++ vienna/Database.m	2026-04-07 11:10:02.807769744 +0000
+--- vienna/Database.m	2026-04-07 13:21:55.985301485 +0000
++++ vienna/Database.m	2026-04-08 12:42:26.973830069 +0000
 @@ -239,7 +239,9 @@
  			NSDictionary * demoFeedsDict = [NSDictionary dictionaryWithContentsOfFile:pathToPList];
  			if (demoFeedsDict)
@@ -22,7 +22,47 @@
  			{
  				int folderId = [[row stringForColumn:@"folder_id"] intValue];
  				int parentId = [[row stringForColumn:@"parent_id"] intValue];
-@@ -929,7 +933,8 @@
+@@ -773,6 +777,30 @@
+ 	return folderId;
+ }
+ 
++/* addGoogleReaderFolder
++ * Add an Open Reader (Google Reader protocol) feed folder and return the ID of the new folder.
++ * Behaves like addRSSFolder but stores type MA_GoogleReader_Folder.
++ */
++-(int)addGoogleReaderFolder:(NSString *)feedName underParent:(int)parentId afterChild:(int)predecessorId subscriptionURL:(NSString *)url
++{
++	int folderId = [self addFolder:parentId afterChild:predecessorId folderName:feedName type:MA_GoogleReader_Folder canAppendIndex:YES];
++	if (folderId != -1)
++	{
++		NSString * preparedURL = [SQLDatabase prepareStringForQuery:url];
++		[self verifyThreadSafety];
++		SQLResult * results = [sqlDatabase performQueryWithFormat:
++			@"insert into rss_folders (folder_id, description, username, home_page, last_update_string, feed_url, bloglines_id) "
++			 "values (%d, '', '', '', '', '%@', %d)",
++			folderId, preparedURL, 0];
++		if (!results)
++			return -1;
++		Folder * folder = [self folderFromID:folderId];
++		[folder setFeedURL:url];
++		[results release];
++	}
++	return folderId;
++}
++
+ /* addFolder
+  * Create a new folder under the specified parent and give it the requested name and type. If
+  * canAppendIndex is YES then we adjust the name to ensure that the folder name remains unique. If
+@@ -846,7 +874,7 @@
+ 		// folder, mark it so that somewhere down the line we'll request the
+ 		// image for the folder.
+ 		folder = [[[Folder alloc] initWithId:newItemId parentId:parentId name:name type:type] autorelease];
+-		if (type == MA_RSS_Folder)
++		if (type == MA_RSS_Folder || type == MA_GoogleReader_Folder)
+ 			[folder setFlag:MA_FFlag_CheckForImage];
+ 		[foldersDict setObject:folder forKey:[NSNumber numberWithInt:newItemId]];
+ 		
+@@ -929,7 +957,8 @@
  	Folder * folder;
  
  	// Recurse and delete child folders
@@ -32,7 +72,7 @@
  		[self wrappedDeleteFolder:[folder itemId]];
  
  	// Adjust unread counts on parents
-@@ -960,13 +965,13 @@
+@@ -960,13 +989,13 @@
  			BOOL isDirectory = YES;
  			if ([[NSFileManager defaultManager] fileExistsAtPath:feedSourceFilePath isDirectory:&isDirectory] && !isDirectory)
  			{
@@ -48,7 +88,7 @@
  			}
  		}
  	}
-@@ -1031,7 +1036,8 @@
+@@ -1031,7 +1060,8 @@
  
  	// Send the pre-delete notification before we start the transaction so that the handlers can
  	// safely do any database access.
@@ -58,7 +98,7 @@
  	{
  		numFolder = [NSNumber numberWithInt:[folder itemId]];
  		[arrayOfFolderIds addObject:numFolder];
-@@ -1045,7 +1051,8 @@
+@@ -1045,7 +1075,8 @@
  
  	// Send the post-delete notification after we're finished. Note that the folder actually corresponding to
  	// each numFolder won't exist any more and the handlers need to be aware of this.
@@ -68,7 +108,7 @@
  		[[NSNotificationCenter defaultCenter] postNotificationName:@"MA_Notify_FolderDeleted" object:numFolder];
  	
  	return result;
-@@ -1326,31 +1333,31 @@
+@@ -1326,31 +1357,31 @@
   * Retrieve a Folder given it's name.
   */
  -(Folder *)folderFromName:(NSString *)wantedName
@@ -106,7 +146,7 @@
  /* handleAutoSortFoldersTreeChange
   * Called when preference changes for sorting folders tree.
   * Store the new method in the database.
-@@ -1651,10 +1658,11 @@
+@@ -1651,10 +1682,11 @@
  		results = [sqlDatabase performQuery:@"select * from smart_folders"];
  		if (results && [results rowCount])
  		{
@@ -121,7 +161,7 @@
  				
  				CriteriaTree * criteriaTree = [[CriteriaTree alloc] initWithString:search_string];
  				[smartfoldersDict setObject:criteriaTree forKey:[NSNumber numberWithInt:folderId]];
-@@ -1739,11 +1747,12 @@
+@@ -1739,11 +1771,12 @@
  		
  		results = [sqlDatabase performQuery:@"select * from folders order by folder_id"];
  		if (results && [results rowCount])
@@ -138,7 +178,7 @@
  				int newItemId = [[row stringForColumn:@"folder_id"] intValue];
  				int newParentId = [[row stringForColumn:@"parent_id"] intValue];
  				int unreadCount = [[row stringForColumn:@"unread_count"] intValue];
-@@ -1776,10 +1785,12 @@
+@@ -1776,10 +1809,12 @@
  		[results release];
  
  		// Load all RSS folders and add them to the list.
@@ -153,7 +193,7 @@
  			{
  				int folderId = [[row stringForColumn:@"folder_id"] intValue];
  				NSString * descriptiontext = [row stringForColumn:@"description"];
-@@ -1798,12 +1809,13 @@
+@@ -1798,12 +1833,13 @@
  		}
  		[results release];
  
@@ -172,7 +212,7 @@
  				while (parentFolder != nil)
  				{
  					[parentFolder setChildUnreadCount:[parentFolder childUnreadCount] + [folder unreadCount]];
-@@ -1830,14 +1842,15 @@
+@@ -1830,14 +1866,15 @@
  
  	NSMutableArray * newArray = [NSMutableArray array];
  	if (newArray != nil)
@@ -192,7 +232,7 @@
  }
  
  /* arrayOfSubFolders
-@@ -1849,8 +1862,10 @@
+@@ -1849,8 +1886,10 @@
  	if (newArray != nil)
  	{
  		int parentId = [folder itemId];
@@ -205,7 +245,7 @@
  		{
  			if ([item parentId] == parentId)
  			{
-@@ -1859,8 +1874,7 @@
+@@ -1859,8 +1898,7 @@
  				else
  					[newArray addObject:item];
  			}
@@ -215,7 +255,7 @@
  	return [newArray sortedArrayUsingSelector:@selector(folderIDCompare:)];
  }
  
-@@ -1902,7 +1916,8 @@
+@@ -1902,7 +1940,8 @@
  			int unread_count = 0;
  			SQLRow * row;
  
@@ -225,7 +265,7 @@
  			{
  				NSString * guid = [row stringForColumn:@"message_id"];
  				BOOL read_flag = [[row stringForColumn:@"read_flag"] intValue];
-@@ -2017,7 +2032,8 @@
+@@ -2017,7 +2056,8 @@
  	NSMutableString * sqlString = [[NSMutableString alloc] init];
  	int count = 0;
  
@@ -235,7 +275,7 @@
  	{
  		Field * field = [self fieldByName:[criteria field]];
  		NSAssert1(field != nil, @"Criteria field %@ does not have an associated database field", [criteria field]);
-@@ -2212,14 +2228,15 @@
+@@ -2212,14 +2252,15 @@
  			[self verifyThreadSafety];
  			SQLResult * results = [sqlDatabase performQueryWithFormat:@"select message_id from messages where folder_id=%d and read_flag=0", folderId];
  			if (results && [results rowCount])
@@ -255,7 +295,7 @@
  		}
  	}
  	return newArray;
-@@ -2272,10 +2289,11 @@
+@@ -2272,10 +2313,11 @@
          Article * article;
          NSString * text;
  
@@ -271,7 +311,7 @@
  			[article setAuthor:[row stringForColumn:@"sender"]];
  			[article setLink:[row stringForColumn:@"link"]];
  			[article setEnclosure:[row stringForColumn:@"enclosure"]];
-@@ -2331,7 +2349,8 @@
+@@ -2331,7 +2373,8 @@
  	BOOL result = NO;
  
  	// Recurse and mark child folders read too
@@ -281,7 +321,7 @@
  	{
  		if ([self markFolderRead:[folder itemId]])
  			result = YES;
-@@ -2478,7 +2497,9 @@
+@@ -2478,7 +2521,9 @@
  	{
  		if ([results rowCount] > 0)
  		{
@@ -292,7 +332,7 @@
  			{
  				NSString * guid = [row stringForColumn:@"message_id"];
  				if (guid != nil)
-@@ -2486,8 +2507,7 @@
+@@ -2486,8 +2531,7 @@
  					[articleGuids addObject:guid];
  				}
  			}
@@ -302,3 +342,63 @@
  		[results release];
  	}
  	
+@@ -2513,6 +2557,59 @@
+ 	sqlDatabase = nil;
+ }
+ 
++/* markUnreadArticlesFromFolder
++ * Given an array of GUIDs that the server considers unread for this folder,
++ * reconcile the local read/unread state: mark unread anything in the list,
++ * mark read everything else.
++ */
++-(void)markUnreadArticlesFromFolder:(Folder *)folder guidArray:(NSArray *)guidArray
++{
++	int folderId = [folder itemId];
++	[self initArticleArray:folder];
++
++	NSMutableSet * unreadSet = [NSMutableSet setWithCapacity:[guidArray count]];
++	NSEnumerator * ge = [guidArray objectEnumerator];
++	NSString * g;
++	while ((g = [ge nextObject]) != nil)
++		[unreadSet addObject:g];
++
++	NSArray * articles = [folder articles];
++	NSEnumerator * ae = [articles objectEnumerator];
++	Article * article;
++	while ((article = [ae nextObject]) != nil) {
++		BOOL shouldBeUnread = [unreadSet containsObject:[article guid]];
++		if (shouldBeUnread && [article isRead])
++			[self markArticleRead:folderId guid:[article guid] isRead:NO];
++		else if (!shouldBeUnread && ![article isRead])
++			[self markArticleRead:folderId guid:[article guid] isRead:YES];
++	}
++}
++
++/* markStarredArticlesFromFolder
++ * Given an array of GUIDs that the server considers starred for this folder,
++ * reconcile local flagged/unflagged state.
++ */
++-(void)markStarredArticlesFromFolder:(Folder *)folder guidArray:(NSArray *)guidArray
++{
++	int folderId = [folder itemId];
++	[self initArticleArray:folder];
++
++	NSMutableSet * starredSet = [NSMutableSet setWithCapacity:[guidArray count]];
++	NSEnumerator * ge = [guidArray objectEnumerator];
++	NSString * g;
++	while ((g = [ge nextObject]) != nil)
++		[starredSet addObject:g];
++
++	NSArray * articles = [folder articles];
++	NSEnumerator * ae = [articles objectEnumerator];
++	Article * article;
++	while ((article = [ae nextObject]) != nil) {
++		BOOL shouldBeStarred = [starredSet containsObject:[article guid]];
++		if (shouldBeStarred != [article isFlagged])
++			[self markArticleFlagged:folderId guid:[article guid] isFlagged:shouldBeStarred];
++	}
++}
++
+ /* dealloc
+  * Clean up and release resources.
+  */

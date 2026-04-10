@@ -16,16 +16,18 @@ OPT_FLAGS ?= -O2
 
 # Paths
 META_DIR = build-meta
-STUBS_H = $(CURDIR)/source/stubs.h
-STUBS_M = $(CURDIR)/source/stubs.m
+STUBS_H = $(CURDIR)/backport/stubs.h
+STUBS_M = $(CURDIR)/backport/stubs.m
 PSM_DIR = $(CURDIR)/deps/PSMTabBarControl
 CURL_DIR = $(CURDIR)/altivec/libs/libcurl/build-mac
 
 # Compilation Flags
 CFLAGS_BASE = $(OPT_FLAGS) -g -Wall -Wno-import -Wno-trigraphs -fpascal-strings -std=gnu99 \
-              -I$(META_DIR) -I$(META_DIR)/sqlite -I$(META_DIR)/extra -I$(PSM_DIR) \
+              -I$(META_DIR)/source -I$(META_DIR)/source/extra \
+              -I$(META_DIR)/backport -I$(META_DIR)/deps \
+              -I$(META_DIR)/deps/JSONKit -I$(META_DIR)/deps/PSMTabBarControl -I$(PSM_DIR) \
               -I$(CURL_DIR)/include \
-              -F$(META_DIR) -F$(BUILD_DIR)/Frameworks \
+              -F$(META_DIR)/source -F$(META_DIR)/resources -F$(BUILD_DIR)/Frameworks \
               -D"HAVE_USLEEP=1" -D"SQLITE_THREADSAFE=0" \
               -fno-stack-protector -fno-common -fno-zero-initialized-in-bss
 
@@ -34,7 +36,7 @@ OBJC_FLAGS = -fobjc-exceptions -include $(STUBS_H)
 # Linking Flags
 CURL_LIBS = $(CURL_DIR)/lib/libAICURLConnection.a $(CURL_DIR)/lib/libcurl.a \
             $(CURL_DIR)/lib/libssl.a $(CURL_DIR)/lib/libcrypto.a $(CURL_DIR)/lib/libz.a
-LDFLAGS_BASE = -F$(META_DIR) -F$(BUILD_DIR)/Frameworks -framework AppKit -framework Foundation -framework WebKit \
+LDFLAGS_BASE = -F$(META_DIR)/source -F$(META_DIR)/resources -F$(META_DIR)/deps -F$(BUILD_DIR)/Frameworks -framework AppKit -framework Foundation -framework WebKit \
                -framework Carbon -framework Security -framework IOKit \
                -framework SystemConfiguration -framework ApplicationServices -framework AddressBook \
                $(CURL_LIBS) -lpthread -ldl -lobjc -ObjC -lgcc_s.10.4 \
@@ -51,10 +53,10 @@ validate_curl:
 	fi
 
 sync_meta:
-	@bash $(CURDIR)/source/sync_meta.sh
+	@bash $(CURDIR)/backport/scripts/sync_meta.sh
 
 patches:
-	@bash $(CURDIR)/source/generate_patches.sh
+	@bash $(CURDIR)/backport/scripts/generate_patches.sh
 
 debug: validate_curl
 	@$(MAKE) sync_meta
@@ -72,14 +74,14 @@ release: validate_curl
 # and after sync_meta has definitely finished.
 ifeq ($(filter build_internal,$(MAKECMDGOALS)),build_internal)
   # Vienna sources
-  SOURCES_M := $(wildcard $(META_DIR)/*.m) $(wildcard $(META_DIR)/extra/*.m)
-  SOURCES_C := $(wildcard $(META_DIR)/sqlite/*.c)
-  
+  SOURCES_M := $(wildcard $(META_DIR)/source/*.m) $(wildcard $(META_DIR)/source/extra/*.m) $(wildcard $(META_DIR)/backport/*.m)
+  SOURCES_C := $(wildcard $(META_DIR)/deps/sqlite/*.c)
+
   # PSM sources
   PSM_SOURCES := $(shell ls $(PSM_DIR)/*.m | grep -vE "Inspector|Integration|Plugin|Demo")
-  
+
   # Flat object mapping
-  OBJS_BASE := $(notdir $(SOURCES_M:.m=.o) $(SOURCES_C:.c=.o)) stubs.o
+  OBJS_BASE := $(notdir $(SOURCES_M:.m=.o) $(SOURCES_C:.c=.o))
   
   PPC_OBJS := $(addprefix $(BUILD_DIR)/obj/ppc/, $(OBJS_BASE))
   X86_OBJS := $(addprefix $(BUILD_DIR)/obj/i386/, $(OBJS_BASE))
@@ -129,13 +131,13 @@ $(BUILD_DIR)/i386/PSMTabBarControl.dylib: $(X86_PSM_OBJS)
 # We search in multiple dirs for the .m/.c file
 $(BUILD_DIR)/obj/ppc/%.o:
 	@mkdir -p $(dir $@)
-	@file=$$(find $(META_DIR) -name "$*.m" -o -name "$*.c" | head -n 1); \
+	@file=$$(find $(META_DIR)/source $(META_DIR)/deps $(META_DIR)/backport -name "$*.m" -o -name "$*.c" | head -n 1); \
 	 echo "  > ppc: $$(basename $$file)"; \
 	 MACOSX_DEPLOYMENT_TARGET=10.4 $(CC_PPC) $(CFLAGS_BASE) $(OBJC_FLAGS) -arch ppc -isysroot $(PPC_SDK) -c $$file -o $@
 
 $(BUILD_DIR)/obj/i386/%.o:
 	@mkdir -p $(dir $@)
-	@file=$$(find $(META_DIR) -name "$*.m" -o -name "$*.c" | head -n 1); \
+	@file=$$(find $(META_DIR)/source $(META_DIR)/deps $(META_DIR)/backport -name "$*.m" -o -name "$*.c" | head -n 1); \
 	 echo "  > i386: $$(basename $$file)"; \
 	 MACOSX_DEPLOYMENT_TARGET=10.4 $(CC_X86) $(CFLAGS_BASE) $(OBJC_FLAGS) -arch i386 -isysroot $(i386_SDK) -c $$file -o $@
 
@@ -167,10 +169,10 @@ $(BUNDLE): $(BUNDLE)/Contents/MacOS/$(APP_NAME) $(BUNDLE)/Contents/Frameworks/PS
 	@mkdir -p $(BUNDLE)/Contents/SharedSupport/Scripts
 	@cp $(META_DIR)/Info.plist $(BUNDLE)/Contents/Info.plist
 	@echo "APPL????" > $(BUNDLE)/Contents/PkgInfo
-	@find $(META_DIR) -maxdepth 1 \( -name "*.tiff" -o -name "*.plist" -o -name "*.icns" -o -name "*.rtf" -o -name "*.html" -o -name "*.png" -o -name "*.scriptSuite" -o -name "*.scriptTerminology" -o -name "*.nib" \) -exec cp -R {} $(BUNDLE)/Contents/Resources/ \;
-	@for dir in $(shell find $(META_DIR) -maxdepth 1 -name "*.lproj" -type d); do cp -R $$dir $(BUNDLE)/Contents/Resources/; done
-	@cp -R $(META_DIR)/Styles/* $(BUNDLE)/Contents/SharedSupport/Styles/
-	@cp -R $(META_DIR)/scripts/* $(BUNDLE)/Contents/SharedSupport/Scripts/
+	@find $(META_DIR)/resources -maxdepth 1 \( -name "*.tiff" -o -name "*.plist" -o -name "*.icns" -o -name "*.rtf" -o -name "*.html" -o -name "*.png" -o -name "*.scriptSuite" -o -name "*.scriptTerminology" -o -name "*.nib" \) -exec cp -R {} $(BUNDLE)/Contents/Resources/ \;
+	@for dir in $(shell find $(META_DIR)/resources -maxdepth 1 -name "*.lproj" -type d); do cp -R $$dir $(BUNDLE)/Contents/Resources/; done
+	@cp -R $(META_DIR)/resources/Styles/* $(BUNDLE)/Contents/SharedSupport/Styles/
+	@cp -R $(META_DIR)/resources/scripts/* $(BUNDLE)/Contents/SharedSupport/Scripts/
 	@find $(PSM_DIR) -maxdepth 1 \( -name "*.png" -o -name "*.jpg" \) -exec cp {} $(BUNDLE)/Contents/Resources/ \;
 	@for dir in $(shell find $(PSM_DIR) -maxdepth 1 -name "*.lproj" -type d); do cp -R $$dir $(BUNDLE)/Contents/Resources/; done
 	@echo "  > copying cacert.pem"

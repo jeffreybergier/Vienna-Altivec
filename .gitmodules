@@ -7,3 +7,6 @@
 [submodule "deps/PSMTabBarControl"]
 	path = deps/PSMTabBarControl
 	url = git@github.com:dorianj/PSMTabBarControl.git
+[submodule "deps/JSONKit"]
+	path = deps/JSONKit
+	url = https://github.com/johnezang/JSONKit.git

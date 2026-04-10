@@ -1,0 +1,17 @@
+--- vienna/Database.h	2026-04-07 13:21:55.984518870 +0000
++++ vienna/Database.h	2026-04-08 12:42:27.638526073 +0000
+@@ -93,6 +93,7 @@
+ // RSS folder functions
+ +(NSString *)untitledFeedFolderName;
+ -(int)addRSSFolder:(NSString *)feedName underParent:(int)parentId afterChild:(int)predecessorId subscriptionURL:(NSString *)url;
++-(int)addGoogleReaderFolder:(NSString *)feedName underParent:(int)parentId afterChild:(int)predecessorId subscriptionURL:(NSString *)url;
+ 
+ // Search folder functions
+ -(void)setSearchString:(NSString *)newSearchString;
+@@ -114,4 +115,6 @@
+ -(void)markArticleDeleted:(int)folderId guid:(NSString *)guid isDeleted:(BOOL)isDeleted;
+ -(BOOL)isTrashEmpty;
+ -(NSArray *)guidHistoryForFolderId:(int)folderId;
++-(void)markUnreadArticlesFromFolder:(Folder *)folder guidArray:(NSArray *)guidArray;
++-(void)markStarredArticlesFromFolder:(Folder *)folder guidArray:(NSArray *)guidArray;
+ @end

@@ -162,44 +162,56 @@ Requests 2 and 3 reconcile read/starred state against the server's authoritative
 | Unsubscribe | `POST /subscription/edit ac=unsubscribe` |
 | Move to folder | `POST /subscription/edit ac=edit a=user/-/label/{name}` |
 
-### Porting Work (file by file)
+### Implementation Status
 
-#### `GoogleReader.m` (the main effort)
+#### ✅ Completed
 
-1. **Replace ASIHTTPRequest with AsyncConnection/AICURLConnection**
-   - All `ASIHTTPRequest` GET requests → `AsyncConnection` delegate pattern (already used by `RefreshManager`)
-   - All `ASIFormDataRequest` POST requests → `AICURLConnection` with manually constructed `application/x-www-form-urlencoded` body
-   - Delegate callbacks map directly: `requestFinished:` → `connectionDidFinishLoading:`, `requestFailed:` → `connection:didFailWithError:`
+**New files in `source/extra/`** (auto-copied into `build-meta/extra/` by `sync_meta.sh`, compiled as part of the flat build):
 
-2. **Remove GCD blocks (~15–20 sites)**
-   - `dispatch_async(queue, ^{ ... })` wrappers around callback bodies → remove the wrapper, run inline (AsyncConnection already dispatches on the right thread via its delegate)
-   - `dispatch_async(dispatch_get_main_queue(), ^{ ... })` for UI updates → `performSelectorOnMainThread:withObject:waitUntilDone:`
+| File | Status | Notes |
+|---|---|---|
+| `GoogleReader.h` | Done | Tiger-compatible interface; `MA_GoogleReader_Folder`/`IsGoogleReaderFolder` in `Folder.h` |
+| `GoogleReader.m` | Done | Full port — see details below |
+| `JSONKit.h` | Done | Extracted from v3.0.0; no changes needed |
+| `JSONKit.m` | Done | One fix: `@autoreleasepool` → `NSAutoreleasePool` for Tiger |
 
-3. **Replace `doTransactionWithBlock:`**
-   - `[db doTransactionWithBlock:^(BOOL *rollback) { ... }]` → `[db beginTransaction]; ...; [db commitTransaction];` (both exist in 2.6.0's `Database.m`)
+**Patches to existing Vienna files:**
 
-4. **Convert fast enumeration**
-   - `for (x in collection)` → `NSEnumerator` pattern (same as done for AppController.m, PluginManager.m, etc.)
+| File | Status | Changes |
+|---|---|---|
+| `Folder.h` | Done | Added `MA_GoogleReader_Folder 7`, `IsGoogleReaderFolder(f)` macro |
+| `Database.h` | Done | Added `addGoogleReaderFolder:`, `markUnreadArticlesFromFolder:guidArray:`, `markStarredArticlesFromFolder:guidArray:` |
+| `Database.m` | Done | Implemented all three new methods; `MA_GoogleReader_Folder` handled same as `MA_RSS_Folder` in `addFolder:` |
+| `Preferences.h/.m` | Done | Added `syncGoogleReader`, `syncServer`, `syncingUser` prefs backed by NSUserDefaults |
+| `AppController.h/.m` | Done | Added `createNewGoogleReaderSubscription:underFolder:withTitle:afterChild:` |
 
-5. **Convert `@property` (nonatomic, retain) to manual ivar + getter/setter**
+**`GoogleReader.m` port — what changed from v3.0.0:**
 
-#### New Database methods needed
+1. **`GRRequest` replaces `ASIHTTPRequest`** — A thin context object (defined at the top of `GoogleReader.m`) that acts as its own `AICURLConnection` delegate. It accumulates response data, then calls back to `GoogleReader` via a stored `finishSelector`/`failSelector`. Exposes `responseData`, `responseStatusCode`, `userInfo`, `originalURL`, `error` — the same surface `ASIHTTPRequest` provided to callbacks.
 
-These methods exist in v3.0.0's `Database.m` but not in 2.6.0's. They need to be added via the patch system:
+2. **All async GETs** use `startGRRequest:withTarget:finishSelector:failSelector:userInfo:` — a private helper that builds an authenticated `NSMutableURLRequest`, creates an `AICURLConnection`, and starts it. Three chained requests fire per feed (content → unread IDs → starred IDs).
 
-| Method | What it does |
+3. **All sync POSTs** (login, getToken, subscribeToFeed, unsubscribeFromFeed, setFolderName, markRead, markStarred) use `AICURLConnection sendSynchronousRequest:returningResponse:error:` with manually constructed `application/x-www-form-urlencoded` bodies.
+
+4. **GCD removed** — All `dispatch_async(queue, ^{})` wrappers removed (callbacks run directly). `dispatch_async(dispatch_get_main_queue(), ^{})` for UI replaced with `performSelectorOnMainThread:@selector(notifyArticleCountUpdate)` which calls `setStatusMessage:nil persist:NO` and `showUnreadCountOnApplicationIconAndWindowTitle` on the main thread.
+
+5. **`doTransactionWithBlock:` removed** → `beginTransaction`/`commitTransaction` pairs.
+
+6. **Fast enumeration removed** → `NSEnumerator` throughout.
+
+7. **`@property`/`@synthesize` removed** → manual ivars and getter/setter methods.
+
+8. **`APPCONTROLLER` macro** → `(AppController *)[NSApp delegate]` (the pattern used throughout 2.6.0).
+
+**Build result:** Compiles cleanly for both PPC and i386 slices.
+
+#### 🔲 Not Yet Done
+
+| File | Work remaining |
 |---|---|
-| `createArticle:folderId:article:guidHistory:` | Insert article with GUID dedup tracking |
-| `markUnreadArticlesFromFolder:guidArray:` | Bulk reconcile read state from server list |
-| `markStarredArticlesFromFolder:guidArray:` | Bulk reconcile starred state from server list |
-
-#### Other files
-
-| File | Work |
-|---|---|
-| `SyncPreferences.m/h` | Port as-is — it's a simple NSWindowController with no GCD/blocks |
-| `KnownSyncServers.plist` | Copy directly into bundle resources |
-| `RefreshManager.m` | Add ~27 lines to call `GoogleReader` singleton on refresh |
-| `AppController.m` | Add menu items and sync notification handlers (~51 lines) |
-| `Preferences.m/h` | Add sync preference keys (`syncGoogleReader`, `syncServer`, `syncingUser`) |
-| `JSONKit.m/h` | Drop in as a new source file — MRC-compatible, works on 10.4 |
+| `SyncPreferences.m/h` | Port the preferences UI panel (NSWindowController, no GCD) — needed for user to configure server/credentials |
+| `KnownSyncServers.plist` | Copy into bundle resources so the UI can populate the server dropdown |
+| `RefreshManager.m` | Wire `GoogleReader` into the refresh cycle — call `refreshFeed:withLog:shouldIgnoreArticleLimit:` for each GR folder during a refresh |
+| `AppController.m` | Add sync menu items and notification handlers |
+| `Folder.h` / `Database.m` | Ensure GR folders are loaded correctly on startup (type 7 round-trips through DB) |
+| Integration testing | Deploy to imac-rsa and verify authentication + feed sync against a real Open Reader server (FreshRSS, TheOldReader, etc.) |

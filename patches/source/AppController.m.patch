@@ -1,6 +1,6 @@
---- vienna/AppController.m	2026-04-07 13:09:04.201271845 +0000
-+++ vienna/AppController.m	2026-04-07 13:11:22.115287010 +0000
-@@ -46,15 +46,12 @@
+--- vienna/AppController.m
++++ vienna/AppController.m
+@@ -46,15 +46,13 @@
  #import "Preferences.h"
  #import "InfoWindow.h"
  #import "DownloadManager.h"
@@ -11,12 +11,13 @@
  #import "SearchPanel.h"
  #import "SearchMethod.h"
 -#import <Sparkle/Sparkle.h>
++#import "SyncPreferences.h"
  #import <WebKit/WebKit.h>
 -#import <Growl/GrowlDefines.h>
  #include <mach/mach_port.h>
  #include <mach/mach_interface.h>
  #include <mach/mach_init.h>
-@@ -458,8 +455,8 @@
+@@ -458,8 +456,8 @@
  	[mainWindow setToolbar:toolbar];
  	
  	// Give the status bar and filter string an embossed look
@@ -27,7 +28,18 @@
  	[currentFilterTextField setStringValue:@""];
  	
  	// Preload dictionary of standard URLs
-@@ -777,28 +774,30 @@
+@@ -546,6 +544,10 @@
+ 	// Kick off an initial refresh
+ 	if ([prefs refreshOnStartup])
+ 		[self refreshAllSubscriptions:self];
++
++	// TEMP: Show Sync Preferences window after a short delay for early sync testing.
++	// Delay gives the main window time to settle before we bring the sync window forward.
++	[self performSelector:@selector(_showSyncPrefsDebug) withObject:nil afterDelay:2.0];
+ }
+ 
+ /* applicationShouldHandleReopen
+@@ -777,28 +779,30 @@
  
  	[cellMenu addItem: [NSMenuItem separatorItem]];
  
@@ -66,7 +78,7 @@
  		{
  			if (![searchMethod friendlyName]) 
  				continue;
-@@ -1218,7 +1217,7 @@
+@@ -1218,7 +1222,7 @@
   */
  -(void)openURLFromString:(NSString *)urlString inPreferredBrowser:(BOOL)openInPreferredBrowserFlag
  {
@@ -75,7 +87,7 @@
  }
  
  /* openURL
-@@ -1272,7 +1271,9 @@
+@@ -1272,7 +1276,9 @@
   */
  -(IBAction)downloadEnclosure:(id)sender
  {
@@ -86,7 +98,7 @@
  	{
  		if ([currentArticle hasEnclosure])
  		{
-@@ -1333,13 +1334,14 @@
+@@ -1333,13 +1339,14 @@
  -(void)loadOpenTabs
  {
  	NSArray * tabLinks = [[Preferences standardPreferences] arrayForKey:MAPref_TabList];
@@ -105,7 +117,7 @@
  /* openVienna
   * Calls into showMainWindow but activates the app first.
   */
-@@ -1596,7 +1598,9 @@
+@@ -1596,7 +1603,9 @@
  	NSMenu * sortSubmenu = [[[NSMenu alloc] initWithTitle:@"Sort By"] autorelease];
  	
  	// Add the fields which are sortable to the menu.
@@ -116,7 +128,7 @@
  	{
  		// Filter out columns we don't sort on. Later we should have an attribute in the
  		// field object itself based on which columns we can sort on.
-@@ -1641,11 +1645,12 @@
+@@ -1641,11 +1650,12 @@
  -(void)initColumnsMenu
  {
  	NSMenu * columnsSubMenu = [[[NSMenu alloc] initWithTitle:@"Columns"] autorelease];
@@ -133,7 +145,7 @@
  		if ([field tag] != MA_FieldID_Text && 
  			[field tag] != MA_FieldID_GUID &&
  			[field tag] != MA_FieldID_Comments &&
-@@ -1680,7 +1685,7 @@
+@@ -1680,7 +1690,7 @@
  	[scriptPathMappings removeAllObjects];
  	
  	// Add scripts within the app resource
@@ -142,7 +154,33 @@
  	loadMapFromPath(path, scriptPathMappings, NO, exts);
  	
  	// Add scripts that the user created and stored in the scripts folder
-@@ -2378,7 +2383,7 @@
+@@ -1957,6 +1967,25 @@
+ 	[preferenceController showWindow:self];
+ }
+ 
++/* _showSyncPrefsDebug
++ * TEMP: Deferred helper to create and show the SyncPreferences window.
++ * Deferred via performSelector:afterDelay: so any exception is isolated
++ * from applicationDidFinishLaunching: and will appear in the log.
++ */
++-(void)_showSyncPrefsDebug
++{
++	static SyncPreferences * _syncPrefsDebug = nil;
++	if (!_syncPrefsDebug)
++		_syncPrefsDebug = [[SyncPreferences alloc] init];
++	if (_syncPrefsDebug)
++	{
++		[[_syncPrefsDebug window] center];
++		[NSApp activateIgnoringOtherApps:YES];
++		[[_syncPrefsDebug window] makeKeyAndOrderFront:nil];
++		[[_syncPrefsDebug window] orderFrontRegardless];
++	}
++}
++
+ /* printDocument
+  * Print the selected articles in the article window.
+  */
+@@ -2378,7 +2407,7 @@
  {
  	NSString * stylesPage = [standardURLs valueForKey:@"ViennaMoreStylesPage"];
  	if (stylesPage != nil)
@@ -151,7 +189,7 @@
  }
  
  /* moreScripts
-@@ -2388,7 +2393,7 @@
+@@ -2388,7 +2417,7 @@
  {
  	NSString * scriptsPage = [standardURLs valueForKey:@"ViennaMoreScriptsPage"];
  	if (scriptsPage != nil)
@@ -160,7 +198,7 @@
  }
  
  /* viewArticlePages inPreferredBrowser
-@@ -2409,12 +2414,13 @@
+@@ -2409,12 +2438,13 @@
          NSMutableArray * articlesWithLinks = [NSMutableArray arrayWithCapacity:[articleArray count]];
          NSMutableArray * urls = [NSMutableArray arrayWithCapacity:[articleArray count]];
  		
@@ -176,7 +214,7 @@
              }
  		}
  		
-@@ -2749,10 +2755,11 @@
+@@ -2749,10 +2779,11 @@
   */
  -(ToolbarItem *)toolbarItemWithIdentifier:(NSString *)theIdentifier
  {
@@ -191,7 +229,33 @@
  	}
  	return nil;
  }
-@@ -2920,9 +2927,10 @@
+@@ -2817,6 +2848,25 @@
+ 	}
+ }
+ 
++/* createNewGoogleReaderSubscription
++ * Create a new Open Reader subscription. The folder is tagged as a GoogleReader
++ * folder type so the refresh manager knows to use the GR sync engine.
++ */
++-(void)createNewGoogleReaderSubscription:(NSString *)url underFolder:(int)parentId withTitle:(NSString *)title afterChild:(int)predecessorId
++{
++	// Skip if already subscribed
++	if ([db folderFromFeedURL:url] != nil)
++		return;
++
++	NSString * feedName = (title && [title length] > 0) ? title : [Database untitledFeedFolderName];
++	[db beginTransaction];
++	int folderId = [db addGoogleReaderFolder:feedName underParent:parentId afterChild:predecessorId subscriptionURL:url];
++	[db commitTransaction];
++
++	if (folderId != -1)
++		[foldersTree selectFolder:folderId];
++}
++
+ /* newSubscription
+  * Display the pane for a new RSS subscription.
+  */
+@@ -2920,9 +2970,10 @@
   */
  -(IBAction)showXMLSource:(id)sender
  {
@@ -205,7 +269,7 @@
  		{
  			XMLSourceWindow * sourceWindow = [[XMLSourceWindow alloc] initWithFolder:folder];
  			
-@@ -3293,7 +3301,7 @@
+@@ -3293,7 +3344,7 @@
  {
  	NSString * homePage = [standardURLs valueForKey:@"ViennaHomePage"];
  	if (homePage != nil)
@@ -214,7 +278,7 @@
  }
  
  /* showAcknowledgements
-@@ -3305,7 +3313,7 @@
+@@ -3305,7 +3356,7 @@
  	NSString * pathToAckFile = [thisBundle pathForResource:@"Acknowledgements" ofType:@"html"];
  	if (pathToAckFile != nil)
  	{
@@ -223,7 +287,7 @@
  	}
  }
  
-@@ -3423,7 +3431,9 @@
+@@ -3423,7 +3474,9 @@
  		// If the current view is a browser view and "Search all articles" is the current SearchMethod, switch to "Search current webpage"
  		if ([[[prefs searchMethod] friendlyName] isEqualToString:[[SearchMethod searchAllArticlesMethod] friendlyName]])
  		{
@@ -234,7 +298,7 @@
  			{
  				if ([[[menuItem representedObject] friendlyName] isEqualToString:[[SearchMethod searchCurrentWebPageMethod] friendlyName]])
  				{
-@@ -3438,12 +3448,14 @@
+@@ -3438,12 +3491,14 @@
  		// If the current view is anything else "Search current webpage" is active, switch to "Search all articles".
  		if ([[[prefs searchMethod] friendlyName] isEqualToString:[[SearchMethod searchCurrentWebPageMethod] friendlyName]])
  		{
@@ -252,7 +316,7 @@
  				}
  			}
  		}
-@@ -3677,10 +3689,10 @@
+@@ -3677,10 +3732,10 @@
  			else
  			{
  				mailtoLink = [NSMutableString stringWithFormat:@"mailto:?subject=&body="];
@@ -266,7 +330,7 @@
  					[mailtoLink appendFormat: @"%@%@%@%@%@", title, mailtoLineBreak, link, mailtoLineBreak, mailtoLineBreak];
  					CFRelease(title);
  					CFRelease(link);
-@@ -3690,7 +3702,7 @@
+@@ -3690,7 +3745,7 @@
  	}
  	
  	if (mailtoLink != nil)
@@ -275,7 +339,7 @@
  }
  
  /* makeTextSmaller
-@@ -3747,10 +3759,11 @@
+@@ -3747,10 +3802,11 @@
  	else
  	{
  		// Get the currently selected articles from the ArticleView and iterate over them.
@@ -290,7 +354,7 @@
  
  /* sendBlogEvent
   * Send an event to the specified blog editor using the given parameters. Unused parameters should be set to an empty string.
-@@ -4555,4 +4568,4 @@
+@@ -4555,4 +4611,4 @@
  	[searchString release];
  	[super dealloc];
  }

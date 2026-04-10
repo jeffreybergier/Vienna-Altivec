@@ -1,0 +1,17 @@
+--- vienna/Preferences.h	2026-04-07 13:21:56.043471261 +0000
++++ vienna/Preferences.h	2026-04-08 12:42:27.266684977 +0000
+@@ -202,4 +202,12 @@
+ -(SearchMethod *)searchMethod;
+ -(void)setSearchMethod:(SearchMethod *)newMethod;
+ 
+-@end
+\ No newline at end of file
++// Open Reader / Google Reader sync
++-(BOOL)syncGoogleReader;
++-(void)setSyncGoogleReader:(BOOL)flag;
++-(NSString *)syncServer;
++-(void)setSyncServer:(NSString *)newServer;
++-(NSString *)syncingUser;
++-(void)setSyncingUser:(NSString *)newUser;
++
++@end

@@ -1,9 +1,0 @@
---- vienna/Preferences.h	2026-04-07 10:53:55.865427770 +0000
-+++ vienna/Preferences.h	2026-04-07 11:10:03.036836168 +0000
-@@ -202,4 +202,4 @@
- -(SearchMethod *)searchMethod;
- -(void)setSearchMethod:(SearchMethod *)newMethod;
- 
--@end
-\ No newline at end of file
-+@end

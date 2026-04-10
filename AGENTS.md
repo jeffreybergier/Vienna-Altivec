@@ -66,3 +66,105 @@ Deployment is handled via the `altivec_deploy.sh` script, which:
 1. Validates the existence of the universal binary (PPC + i386).
 2. Automates transfer and extraction to remote Mac targets.
 3. Tails remote system logs to provide immediate feedback on crashes or execution errors.
+
+**Standard deployment command:**
+```bash
+./altivec/altivec_deploy.sh ./ -d x5-vm --yes 20
+```
+Where `x5-vm` is the target hostname (substituted based on user request). The `--yes 20` flag auto-answers confirmation prompts and tails logs for 20 seconds.
+
+## 🤖 AI Agent Workflow (Claude Instructions)
+
+When making changes to this codebase, follow this sequence **exactly**:
+
+### 1. Clean Build Environment
+```bash
+make clean
+```
+Removes all stale build artifacts (`build/`, `build-debug/`, `build-release/`, `build-meta/`, `build-meta-tmp/`). This prevents linker issues from outdated `.o` files.
+
+### 2. Sync Meta-Source
+```bash
+make sync_meta
+```
+This orchestrates the entire sync pipeline:
+- Copies original `vienna/` sources to `build-meta/`
+- Applies all patches from `patches/` (both `source/` and `backport/` sections)
+- Copies dependencies and backport files
+- Injects prefix headers (`Vienna_Prefix.pch`, `HelperFunctions.h`, `CrossPlatform.h`) into every `.m` file in `source/`
+- Leaves `backport/` files alone (their imports are real, not injected)
+
+### 3. Edit Sources in build-meta/
+Make surgical changes **only** in:
+- `build-meta/source/` — for Vienna core file modifications
+- `build-meta/backport/` — for backported components (SyncPreferences, nib builders, etc.)
+- `build-meta/resources/` — for resource file modifications
+
+**Do NOT edit these directories directly**:
+- `vienna/` — the No-Touch strategy keeps it pristine
+- `deps/` — external dependencies; use patches if modification needed
+- `backport/` — version-controlled originals (exception below)
+
+**Exception — Direct Edits Allowed**:
+Edit these files **directly in place** without needing to use `build-meta/` and patches:
+- `backport/CrossPlatform.h`
+- `backport/CrossPlatform.m`
+- `backport/stubs.h`
+- `backport/stubs.m`
+- `backport/nib/*` (all files in the nib/ directory)
+
+These are bootstrap/custom files that don't have originals in `vienna/`, so they don't need the patch workflow. Changes here are automatically picked up in the next `make sync_meta`.
+
+### 4. Generate Patches
+```bash
+make patches
+```
+Compares modified files against originals:
+- `source/` files diffed against `vienna/` → stored in `patches/source/`
+- `backport/` files diffed against `backport/` → stored in `patches/backport/` (with `strip=false`)
+- `resources/` files diffed against `vienna/` → stored in `patches/resources/` (only files that originated in Vienna)
+
+The script automatically strips auto-injected headers from `source/` files before diffing, so patches remain portable.
+
+### 5. Clean Before Rebuild
+```bash
+make clean
+```
+Critical: removes stale object files from earlier compilation. Required because source files changed; omitting this step causes the linker to use old `.o` files.
+
+### 6. Build and Test
+```bash
+make debug
+```
+- Runs `sync_meta` (fresh copy, applies new patches)
+- Compiles both PPC and i386 slices
+- Produces `build-debug/Vienna.app`
+
+Verify via deployment:
+```bash
+./altivec/altivec_deploy.sh ./ -d <target-host> --yes 20
+```
+
+### Quick Reference Flowchart
+```
+make clean
+    ↓
+make sync_meta
+    ↓
+[Edit build-meta/ files]
+    ↓
+make patches
+    ↓
+make clean         ← CRITICAL: clears stale .o files
+    ↓
+make debug         ← Contains internal sync_meta call
+    ↓
+./altivec/altivec_deploy.sh
+```
+
+### Common Pitfalls
+- **Forgetting `make clean` before rebuild**: Old `.o` files prevent recompilation, leaving bug fixes invisible in the binary. Use `strings` to verify if code made it into the binary.
+- **Editing `vienna/` directly**: Breaks the no-touch strategy and gets lost on next sync. Only edit `build-meta/`.
+- **Not running `make patches` after changes**: New logic won't persist across builds. Patches must be regenerated.
+- **Modifying `backport/` originals instead of `build-meta/backport/`**: The originals in `backport/` are version-controlled; changes go in `build-meta/backport/`, then patches are diffed.
+- **Resource files not found**: Ensure `backport/resources/` exists and contains `.tiff` and `.plist` files. `sync_meta.sh` copies from there to `build-meta/resources/`.
