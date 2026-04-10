@@ -17,7 +17,15 @@
  #include <mach/mach_port.h>
  #include <mach/mach_interface.h>
  #include <mach/mach_init.h>
-@@ -458,8 +456,8 @@
+@@ -418,6 +416,7 @@
+  */
+ -(void)applicationDidFinishLaunching:(NSNotification *)aNot
+ {
++	NSLog(@"[AppController.applicationDidFinishLaunching] Hello from Altivec Intelligence");
+ 	Preferences * prefs = [Preferences standardPreferences];
+ 	
+ 	// Register a bunch of notifications
+@@ -458,8 +457,8 @@
  	[mainWindow setToolbar:toolbar];
  	
  	// Give the status bar and filter string an embossed look
@@ -28,7 +36,7 @@
  	[currentFilterTextField setStringValue:@""];
  	
  	// Preload dictionary of standard URLs
-@@ -546,6 +544,10 @@
+@@ -546,6 +545,10 @@
  	// Kick off an initial refresh
  	if ([prefs refreshOnStartup])
  		[self refreshAllSubscriptions:self];
@@ -39,7 +47,7 @@
  }
  
  /* applicationShouldHandleReopen
-@@ -777,28 +779,30 @@
+@@ -777,28 +780,30 @@
  
  	[cellMenu addItem: [NSMenuItem separatorItem]];
  
@@ -78,7 +86,7 @@
  		{
  			if (![searchMethod friendlyName]) 
  				continue;
-@@ -1218,7 +1222,7 @@
+@@ -1218,7 +1223,7 @@
   */
  -(void)openURLFromString:(NSString *)urlString inPreferredBrowser:(BOOL)openInPreferredBrowserFlag
  {
@@ -87,7 +95,7 @@
  }
  
  /* openURL
-@@ -1272,7 +1276,9 @@
+@@ -1272,7 +1277,9 @@
   */
  -(IBAction)downloadEnclosure:(id)sender
  {
@@ -98,7 +106,7 @@
  	{
  		if ([currentArticle hasEnclosure])
  		{
-@@ -1333,13 +1339,14 @@
+@@ -1333,13 +1340,14 @@
  -(void)loadOpenTabs
  {
  	NSArray * tabLinks = [[Preferences standardPreferences] arrayForKey:MAPref_TabList];
@@ -117,7 +125,7 @@
  /* openVienna
   * Calls into showMainWindow but activates the app first.
   */
-@@ -1596,7 +1603,9 @@
+@@ -1596,7 +1604,9 @@
  	NSMenu * sortSubmenu = [[[NSMenu alloc] initWithTitle:@"Sort By"] autorelease];
  	
  	// Add the fields which are sortable to the menu.
@@ -128,7 +136,7 @@
  	{
  		// Filter out columns we don't sort on. Later we should have an attribute in the
  		// field object itself based on which columns we can sort on.
-@@ -1641,11 +1650,12 @@
+@@ -1641,11 +1651,12 @@
  -(void)initColumnsMenu
  {
  	NSMenu * columnsSubMenu = [[[NSMenu alloc] initWithTitle:@"Columns"] autorelease];
@@ -145,7 +153,7 @@
  		if ([field tag] != MA_FieldID_Text && 
  			[field tag] != MA_FieldID_GUID &&
  			[field tag] != MA_FieldID_Comments &&
-@@ -1680,7 +1690,7 @@
+@@ -1680,7 +1691,7 @@
  	[scriptPathMappings removeAllObjects];
  	
  	// Add scripts within the app resource
@@ -154,7 +162,7 @@
  	loadMapFromPath(path, scriptPathMappings, NO, exts);
  	
  	// Add scripts that the user created and stored in the scripts folder
-@@ -1957,6 +1967,25 @@
+@@ -1957,6 +1968,25 @@
  	[preferenceController showWindow:self];
  }
  
@@ -180,7 +188,7 @@
  /* printDocument
   * Print the selected articles in the article window.
   */
-@@ -2378,7 +2407,7 @@
+@@ -2378,7 +2408,7 @@
  {
  	NSString * stylesPage = [standardURLs valueForKey:@"ViennaMoreStylesPage"];
  	if (stylesPage != nil)
@@ -189,7 +197,7 @@
  }
  
  /* moreScripts
-@@ -2388,7 +2417,7 @@
+@@ -2388,7 +2418,7 @@
  {
  	NSString * scriptsPage = [standardURLs valueForKey:@"ViennaMoreScriptsPage"];
  	if (scriptsPage != nil)
@@ -198,7 +206,7 @@
  }
  
  /* viewArticlePages inPreferredBrowser
-@@ -2409,12 +2438,13 @@
+@@ -2409,12 +2439,13 @@
          NSMutableArray * articlesWithLinks = [NSMutableArray arrayWithCapacity:[articleArray count]];
          NSMutableArray * urls = [NSMutableArray arrayWithCapacity:[articleArray count]];
  		
@@ -214,7 +222,7 @@
              }
  		}
  		
-@@ -2749,10 +2779,11 @@
+@@ -2749,10 +2780,11 @@
   */
  -(ToolbarItem *)toolbarItemWithIdentifier:(NSString *)theIdentifier
  {
@@ -229,7 +237,7 @@
  	}
  	return nil;
  }
-@@ -2817,6 +2848,25 @@
+@@ -2817,6 +2849,25 @@
  	}
  }
  
@@ -255,7 +263,7 @@
  /* newSubscription
   * Display the pane for a new RSS subscription.
   */
-@@ -2920,9 +2970,10 @@
+@@ -2920,9 +2971,10 @@
   */
  -(IBAction)showXMLSource:(id)sender
  {
@@ -269,7 +277,7 @@
  		{
  			XMLSourceWindow * sourceWindow = [[XMLSourceWindow alloc] initWithFolder:folder];
  			
-@@ -3293,7 +3344,7 @@
+@@ -3293,7 +3345,7 @@
  {
  	NSString * homePage = [standardURLs valueForKey:@"ViennaHomePage"];
  	if (homePage != nil)
@@ -278,7 +286,7 @@
  }
  
  /* showAcknowledgements
-@@ -3305,7 +3356,7 @@
+@@ -3305,7 +3357,7 @@
  	NSString * pathToAckFile = [thisBundle pathForResource:@"Acknowledgements" ofType:@"html"];
  	if (pathToAckFile != nil)
  	{
@@ -287,7 +295,7 @@
  	}
  }
  
-@@ -3423,7 +3474,9 @@
+@@ -3423,7 +3475,9 @@
  		// If the current view is a browser view and "Search all articles" is the current SearchMethod, switch to "Search current webpage"
  		if ([[[prefs searchMethod] friendlyName] isEqualToString:[[SearchMethod searchAllArticlesMethod] friendlyName]])
  		{
@@ -298,7 +306,7 @@
  			{
  				if ([[[menuItem representedObject] friendlyName] isEqualToString:[[SearchMethod searchCurrentWebPageMethod] friendlyName]])
  				{
-@@ -3438,12 +3491,14 @@
+@@ -3438,12 +3492,14 @@
  		// If the current view is anything else "Search current webpage" is active, switch to "Search all articles".
  		if ([[[prefs searchMethod] friendlyName] isEqualToString:[[SearchMethod searchCurrentWebPageMethod] friendlyName]])
  		{
@@ -316,7 +324,7 @@
  				}
  			}
  		}
-@@ -3677,10 +3732,10 @@
+@@ -3677,10 +3733,10 @@
  			else
  			{
  				mailtoLink = [NSMutableString stringWithFormat:@"mailto:?subject=&body="];
@@ -330,7 +338,7 @@
  					[mailtoLink appendFormat: @"%@%@%@%@%@", title, mailtoLineBreak, link, mailtoLineBreak, mailtoLineBreak];
  					CFRelease(title);
  					CFRelease(link);
-@@ -3690,7 +3745,7 @@
+@@ -3690,7 +3746,7 @@
  	}
  	
  	if (mailtoLink != nil)
@@ -339,7 +347,7 @@
  }
  
  /* makeTextSmaller
-@@ -3747,10 +3802,11 @@
+@@ -3747,10 +3803,11 @@
  	else
  	{
  		// Get the currently selected articles from the ArticleView and iterate over them.
@@ -354,7 +362,7 @@
  
  /* sendBlogEvent
   * Send an event to the specified blog editor using the given parameters. Unused parameters should be set to an empty string.
-@@ -4555,4 +4611,4 @@
+@@ -4555,4 +4612,4 @@
  	[searchString release];
  	[super dealloc];
  }
