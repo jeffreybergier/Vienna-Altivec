@@ -1,6 +1,6 @@
 --- compat/SyncPreferences.h
 +++ compat/SyncPreferences.h
-@@ -3,24 +3,29 @@
+@@ -3,24 +3,30 @@
  //  Vienna
  //
  //  Created by Adam Hartford on 7/7/11.
@@ -36,5 +36,6 @@
  -(IBAction)changeSyncGoogleReader:(id)sender;
  -(IBAction)changeSource:(id)sender;
  -(IBAction)visitWebsite:(id)sender;
++-(IBAction)syncNow:(id)sender;
 +
  @end

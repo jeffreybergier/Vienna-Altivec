@@ -46,7 +46,8 @@
 -#define TIMESTAMP [NSString stringWithFormat:@"%0.0f",[[NSDate date] timeIntervalSince1970]]
 +#define TIMESTAMP [NSString stringWithFormat:@"%0.0f", [[NSDate date] timeIntervalSince1970]]
  
- static NSString * LoginBaseURL = @"https://%@/accounts/ClientLogin?accountType=GOOGLE&service=reader";
+-static NSString * LoginBaseURL = @"https://%@/accounts/ClientLogin?accountType=GOOGLE&service=reader";
++static NSString * LoginBaseURL = @"https://%@/accounts/ClientLogin";
  static NSString * ClientName = @"ViennaRSS";
  
 -// host specific variables
@@ -845,7 +846,7 @@
 +
 +    // Synchronous POST to ClientLogin
 +    NSURL * loginURL = [NSURL URLWithString:[NSString stringWithFormat:LoginBaseURL, openReaderHost]];
-+    NSString * loginBody = [NSString stringWithFormat:@"Email=%@&Passwd=%@",
++    NSString * loginBody = [NSString stringWithFormat:@"client=Vienna&accountType=HOSTED_OR_GOOGLE&service=reader&Email=%@&Passwd=%@",
 +                            urlEncode(grUsername), urlEncode(grPassword)];
 +    NSMutableURLRequest * req = makePOSTRequest(loginURL, loginBody, nil);
 +

@@ -6,7 +6,7 @@
 //  All frame coordinates are taken directly from the XIB (AppKit non-flipped
 //  origin: bottom-left, y increasing upward).
 //
-//  Window content size: {507, 247}
+//  Window content size: {507, 287}
 //
 //  Controls (XIB id -> ivar/action):
 //    565105119  NSButton checkbox   "Sync with an Open Reader server"  -> syncButton
@@ -20,6 +20,7 @@
 //     84390960  NSTextField editable (username field)                  -> username
 //   1054133262  NSTextField label   "Password:"
 //    835690345  NSSecureTextField   (password field)                   -> password
+//             (custom) NSButton     "Sync Now"                        -> syncNow:
 //
 
 #import "SyncPreferences.nib.h"
@@ -65,8 +66,8 @@ static NSTextField * makeField(NSRect frame)
     NSView * contentView = [[self window] contentView];
 
     // --- Checkbox: "Sync with an Open Reader server" ---
-    // XIB frame: {{18, 211}, {463, 18}}
-    syncButton = [[NSButton alloc] initWithFrame:NSMakeRect(18, 211, 463, 18)];
+    // XIB frame: {{18, 211}, {463, 18}} + 40
+    syncButton = [[NSButton alloc] initWithFrame:NSMakeRect(18, 251, 463, 18)];
     [syncButton setButtonType:NSSwitchButton];
     [syncButton setTitle:@"Sync with an Open Reader server"];
     [syncButton setFont:[NSFont boldSystemFontOfSize:13.0]];
@@ -75,13 +76,13 @@ static NSTextField * makeField(NSRect frame)
     [contentView addSubview:syncButton];
 
     // --- Label: "Server:" ---
-    // XIB frame: {{17, 163}, {119, 21}}
-    [contentView addSubview:makeLabel(@"Server:", NSMakeRect(17, 163, 119, 21),
+    // XIB frame: {{17, 163}, {119, 21}} + 40
+    [contentView addSubview:makeLabel(@"Server:", NSMakeRect(17, 203, 119, 21),
                                       13.0, NSRightTextAlignment)];
 
     // --- PopUpButton: service selector ---
-    // XIB frame: {{138, 160}, {175, 26}}
-    openReaderSource = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(138, 160, 175, 26)
+    // XIB frame: {{138, 160}, {175, 26}} + 40
+    openReaderSource = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(138, 200, 175, 26)
                                                   pullsDown:NO];
     [openReaderSource setFont:[NSFont systemFontOfSize:13.0]];
     [openReaderSource setTarget:self];
@@ -89,18 +90,18 @@ static NSTextField * makeField(NSRect frame)
     [contentView addSubview:openReaderSource];
 
     // --- Label: "URL: https://" ---
-    // XIB frame: {{17, 128}, {119, 22}}
-    [contentView addSubview:makeLabel(@"URL: https://", NSMakeRect(17, 128, 119, 22),
+    // XIB frame: {{17, 128}, {119, 22}} + 40
+    [contentView addSubview:makeLabel(@"URL: https://", NSMakeRect(17, 168, 119, 22),
                                       13.0, NSRightTextAlignment)];
 
     // --- TextField: openReaderHost (editable) ---
-    // XIB frame: {{140, 131}, {296, 22}}
-    openReaderHost = makeField(NSMakeRect(140, 131, 296, 22));
+    // XIB frame: {{140, 131}, {296, 22}} + 40
+    openReaderHost = makeField(NSMakeRect(140, 171, 296, 22));
     [contentView addSubview:openReaderHost];
 
     // --- Button: globe (visit website) ---
-    // XIB frame: {{437, 125}, {48, 32}}
-    NSButton * globeButton = [[NSButton alloc] initWithFrame:NSMakeRect(437, 125, 48, 32)];
+    // XIB frame: {{437, 125}, {48, 32}} + 40
+    NSButton * globeButton = [[NSButton alloc] initWithFrame:NSMakeRect(437, 165, 48, 32)];
     [globeButton setButtonType:NSMomentaryLightButton];
     [globeButton setBezelStyle:NSRoundedBezelStyle];
     [globeButton setTitle:@"Go"];
@@ -110,8 +111,8 @@ static NSTextField * makeField(NSRect frame)
     [globeButton release];
 
     // --- TextField: credentialsInfoText (hint, wrapping, read-only) ---
-    // XIB frame: {{17, 79}, {422, 33}}
-    credentialsInfoText = [[NSTextField alloc] initWithFrame:NSMakeRect(17, 79, 422, 33)];
+    // XIB frame: {{17, 79}, {422, 33}} + 40
+    credentialsInfoText = [[NSTextField alloc] initWithFrame:NSMakeRect(17, 119, 422, 33)];
     [credentialsInfoText setEditable:NO];
     [credentialsInfoText setSelectable:NO];
     [credentialsInfoText setBezeled:NO];
@@ -122,30 +123,40 @@ static NSTextField * makeField(NSRect frame)
     [contentView addSubview:credentialsInfoText];
 
     // --- Label: "Login:" ---
-    // XIB frame: {{-3, 54}, {139, 17}} — right-aligned, clipped left edge intentional
-    [contentView addSubview:makeLabel(@"Login:", NSMakeRect(-3, 54, 139, 17),
+    // XIB frame: {{-3, 54}, {139, 17}} + 40
+    [contentView addSubview:makeLabel(@"Login:", NSMakeRect(-3, 94, 139, 17),
                                       13.0, NSRightTextAlignment)];
 
     // --- TextField: username (editable) ---
-    // XIB frame: {{140, 51}, {296, 22}}
-    username = makeField(NSMakeRect(140, 51, 296, 22));
+    // XIB frame: {{140, 51}, {296, 22}} + 40
+    username = makeField(NSMakeRect(140, 91, 296, 22));
     [contentView addSubview:username];
 
     // --- Label: "Password:" ---
-    // XIB frame: {{-3, 22}, {139, 17}} — right-aligned, clipped left edge intentional
-    [contentView addSubview:makeLabel(@"Password:", NSMakeRect(-3, 22, 139, 17),
+    // XIB frame: {{-3, 22}, {139, 17}} + 40
+    [contentView addSubview:makeLabel(@"Password:", NSMakeRect(-3, 62, 139, 17),
                                       13.0, NSRightTextAlignment)];
 
     // --- SecureTextField: password ---
-    // XIB frame: {{140, 19}, {296, 22}}
-    // Declared as NSSecureTextField * in header; same layout as a regular field
-    password = (NSSecureTextField *)[[NSSecureTextField alloc] initWithFrame:NSMakeRect(140, 19, 296, 22)];
+    // XIB frame: {{140, 19}, {296, 22}} + 40
+    //                                TODO: Change back to NSSecureTextField
+    password = (NSSecureTextField *)[[NSTextField alloc] initWithFrame:NSMakeRect(140, 59, 296, 22)];
     [password setEditable:YES];
     [password setSelectable:YES];
     [password setBezeled:YES];
     [password setDrawsBackground:YES];
     [password setFont:[NSFont systemFontOfSize:13.0]];
     [contentView addSubview:(NSView *)password];
+
+    // --- Button: "Sync Now" ---
+    NSButton * syncNowButton = [[NSButton alloc] initWithFrame:NSMakeRect(390, 10, 100, 28)];
+    [syncNowButton setButtonType:NSMomentaryLightButton];
+    [syncNowButton setBezelStyle:NSRoundedBezelStyle];
+    [syncNowButton setTitle:@"Sync Now"];
+    [syncNowButton setTarget:self];
+    [syncNowButton setAction:@selector(syncNow:)];
+    [contentView addSubview:syncNowButton];
+    [syncNowButton release];
 }
 
 @end

@@ -1,6 +1,6 @@
 --- compat/SyncPreferences.m
 +++ compat/SyncPreferences.m
-@@ -7,245 +7,250 @@
+@@ -7,245 +7,256 @@
  //  Copyright 2011-2013 Vienna contributors (see Help/Acknowledgements for list of contributors).
  //  All rights reserved.
  //
@@ -49,7 +49,7 @@
 -    self = [super initWithWindow:window];
 -    if (self) {
 -        // Initialization code here.
-+    NSRect contentRect = NSMakeRect(0, 0, 507, 247);
++    NSRect contentRect = NSMakeRect(0, 0, 507, 287);
 +    NSWindow * win = [[NSWindow alloc] initWithContentRect:contentRect
 +                                                 styleMask:NSTitledWindowMask
 +                                                   backing:NSBackingStoreBuffered
@@ -67,9 +67,18 @@
      return self;
  }
  
--
---(void)windowWillClose:(NSNotification *)notification 
 +-(void)windowWillClose:(NSNotification *)notification
++{
++    [[NSNotificationCenter defaultCenter] removeObserver:self];
++    if ([syncButton state] == NSOnState && _credentialsChanged)
++    {
++        [[GoogleReader sharedManager] resetAuthentication];
++        [[GoogleReader sharedManager] loadSubscriptions:nil];
++    }
++}
+ 
+--(void)windowWillClose:(NSNotification *)notification 
++-(IBAction)changeSyncGoogleReader:(id)sender
  {
 -	[[NSNotificationCenter defaultCenter] removeObserver:self];
 -	if([syncButton state] == NSOnState && _credentialsChanged)
@@ -77,20 +86,50 @@
 -		[[GoogleReader sharedManager] resetAuthentication];
 -		[[GoogleReader sharedManager] loadSubscriptions:nil];
 -	}
-+    [[NSNotificationCenter defaultCenter] removeObserver:self];
-+    if ([syncButton state] == NSOnState && _credentialsChanged)
++    BOOL sync = [sender state] == NSOnState;
++    Preferences *prefs = [Preferences standardPreferences];
++    [prefs setSyncGoogleReader:sync];
++    [prefs savePreferences];
++    if (sync)
 +    {
-+        [[GoogleReader sharedManager] resetAuthentication];
-+        [[GoogleReader sharedManager] loadSubscriptions:nil];
++        [openReaderSource setEnabled:YES];
++        [openReaderHost setEnabled:YES];
++        [username setEnabled:YES];
++        [password setEnabled:YES];
++        _credentialsChanged = YES;
++    }
++    else
++    {
++        [openReaderSource setEnabled:NO];
++        [openReaderHost setEnabled:NO];
++        [username setEnabled:NO];
++        [password setEnabled:NO];
++        [[GoogleReader sharedManager] clearAuthentication];
 +    }
  }
  
--
++-(IBAction)changeSource:(id)sender
++{
++    NSMenuItem * readerItem = [openReaderSource selectedItem];
++    NSString * key = [readerItem title];
++    NSDictionary * itemDict = [sourcesDict valueForKey:key];
++    NSString * hostName = [itemDict valueForKey:@"Address"];
++    if (!hostName)
++        hostName = @"";
++    NSString * hint = [itemDict valueForKey:@"Hint"];
++    if (!hint)
++        hint = @"";
++    [openReaderHost setStringValue:hostName];
++    [credentialsInfoText setStringValue:hint];
++    if (sender != nil)
++        [self handleServerTextDidChange:nil];
++}
+ 
 --(IBAction)changeSyncGoogleReader:(id)sender 
-+-(IBAction)changeSyncGoogleReader:(id)sender
++-(IBAction)syncNow:(id)sender
  {
 -    // enable/disable syncing
-     BOOL sync = [sender state] == NSOnState;
+-    BOOL sync = [sender state] == NSOnState;
 -	Preferences *prefs = [Preferences standardPreferences];
 -	[prefs setSyncGoogleReader:sync];
 -	[prefs savePreferences];
@@ -125,45 +164,11 @@
 -	[credentialsInfoText setStringValue:hint];
 -	if (sender != nil)	//user action
 -		[self handleServerTextDidChange:nil];
-+    Preferences *prefs = [Preferences standardPreferences];
-+    [prefs setSyncGoogleReader:sync];
-+    [prefs savePreferences];
-+    if (sync)
-+    {
-+        [openReaderSource setEnabled:YES];
-+        [openReaderHost setEnabled:YES];
-+        [username setEnabled:YES];
-+        [password setEnabled:YES];
-+        _credentialsChanged = YES;
-+    }
-+    else
-+    {
-+        [openReaderSource setEnabled:NO];
-+        [openReaderHost setEnabled:NO];
-+        [username setEnabled:NO];
-+        [password setEnabled:NO];
-+        [[GoogleReader sharedManager] clearAuthentication];
-+    }
++    [[GoogleReader sharedManager] resetAuthentication];
++    [[GoogleReader sharedManager] loadSubscriptions:nil];
  }
  
 -- (IBAction)visitWebsite:(id)sender
-+-(IBAction)changeSource:(id)sender
-+{
-+    NSMenuItem * readerItem = [openReaderSource selectedItem];
-+    NSString * key = [readerItem title];
-+    NSDictionary * itemDict = [sourcesDict valueForKey:key];
-+    NSString * hostName = [itemDict valueForKey:@"Address"];
-+    if (!hostName)
-+        hostName = @"";
-+    NSString * hint = [itemDict valueForKey:@"Hint"];
-+    if (!hint)
-+        hint = @"";
-+    [openReaderHost setStringValue:hostName];
-+    [credentialsInfoText setStringValue:hint];
-+    if (sender != nil)
-+        [self handleServerTextDidChange:nil];
-+}
-+
 +-(IBAction)visitWebsite:(id)sender
  {
      NSURL * url = [NSURL URLWithString:[NSString stringWithFormat:@"https://%@/", [openReaderHost stringValue]]];
@@ -440,7 +445,7 @@
          [alert setAlertStyle:NSWarningAlertStyle];
          [alert beginSheetModalForWindow:[self window] modalDelegate:self didEndSelector:nil contextInfo:nil];
          [[GoogleReader sharedManager] clearAuthentication];
-@@ -254,12 +259,9 @@
+@@ -254,12 +265,9 @@
  
  -(void)dealloc
  {
