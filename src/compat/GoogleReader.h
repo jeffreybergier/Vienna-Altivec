@@ -5,31 +5,30 @@
 //  Created by Adam Hartford on 7/7/11.
 //  Copyright 2011-2014 Vienna contributors (see Help/Acknowledgements for list of contributors). All rights reserved.
 //
-//  Ported to Tiger (10.4) / MRC / AICURLConnection by the Altivec project.
-//  Removes: ASIHTTPRequest, GCD blocks, fast enumeration.
-//
 
-#import <Cocoa/Cocoa.h>
+#import <Foundation/Foundation.h>
+#import "ASIHTTPRequest.h"
 #import "Folder.h"
+#import "ASINetworkQueue.h"
 #import "ActivityLog.h"
+#import "Debug.h"
 
-// Note: MA_GoogleReader_Folder and IsGoogleReaderFolder are defined in Folder.h
-
-@interface GoogleReader : NSObject {
+@interface GoogleReader : NSObject <ASIHTTPRequestDelegate> {
 @private
-    NSString * _token;
-    NSString * _clientAuthToken;
-    NSMutableArray * _localFeeds;
-    NSUInteger countOfNewArticles;
-    NSTimer * tokenTimer;
-    NSTimer * authTimer;
+    NSString * token;
+	NSMutableArray *localFeeds;
+	NSUInteger countOfNewArticles;
+	NSString * clientAuthToken;
+	NSTimer * tokenTimer;
+	NSTimer * authTimer;
 }
 
 +(GoogleReader *)sharedManager;
 
+// Check if an accessToken is available
 -(BOOL)isReady;
 
--(void)loadSubscriptions:(NSNotification *)nc;
+-(void)loadSubscriptions:(NSNotification*)nc;
 -(void)authenticate;
 -(void)getToken;
 -(void)clearAuthentication;
@@ -40,7 +39,7 @@
 -(void)markRead:(NSString *)itemGuid readFlag:(BOOL)flag;
 -(void)markStarred:(NSString *)itemGuid starredFlag:(BOOL)flag;
 -(void)setFolderName:(NSString *)folderName forFeed:(NSString *)feedURL set:(BOOL)flag;
--(void)refreshFeed:(Folder *)thisFolder withLog:(ActivityItem *)aItem shouldIgnoreArticleLimit:(BOOL)ignoreLimit;
+-(ASIHTTPRequest*)refreshFeed:(Folder*)thisFolder withLog:(ActivityItem *)aItem shouldIgnoreArticleLimit:(BOOL)ignoreLimit;
 -(NSUInteger)countOfNewArticles;
 
 @end
