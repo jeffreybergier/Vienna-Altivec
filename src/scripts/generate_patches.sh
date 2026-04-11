@@ -3,6 +3,9 @@
 #
 # Run after editing files in build-stage/. Saves diffs to patches/.
 # Files identical to their original have their patch removed.
+#
+# Priority: if a file exists in src/compat/, it is diffed against src/compat/
+# (saved to patches/compat/). Otherwise diffed against vienna/ (patches/vienna/).
 
 set -e
 
@@ -11,6 +14,7 @@ STAGE_DIR="$REPO_ROOT/build-stage"
 PATCHES_DIR="$REPO_ROOT/patches"
 VIENNA_DIR="$REPO_ROOT/vienna"
 DEPS_DIR="$REPO_ROOT/deps"
+COMPAT_DIR="$REPO_ROOT/src/compat"
 
 if [ ! -f "$STAGE_DIR/.stamp" ]; then
   echo "Error: build-stage/ not found. Run 'make stage' first."
@@ -50,11 +54,16 @@ save_patch() {
 
 echo "=== Generating Patches ==="
 
-echo " > build-stage/source/ vs vienna/"
+echo " > build-stage/source/ vs compat/ and vienna/"
 find "$STAGE_DIR/source" -maxdepth 1 -type f \( -name "*.m" -o -name "*.h" -o -name "*.c" \) | sort | while read -r f; do
-  orig="$VIENNA_DIR/$(basename "$f")"
-  [ -f "$orig" ] || continue
-  save_patch "$orig" "$f" "$PATCHES_DIR/vienna/$(basename "$f").patch" "vienna/"
+  name="$(basename "$f")"
+  if [ -f "$COMPAT_DIR/$name" ]; then
+    # Compat file — diff against src/compat/ original
+    save_patch "$COMPAT_DIR/$name" "$f" "$PATCHES_DIR/compat/${name}.patch" "compat/"
+  elif [ -f "$VIENNA_DIR/$name" ]; then
+    # Vienna file — diff against vienna/ original
+    save_patch "$VIENNA_DIR/$name" "$f" "$PATCHES_DIR/vienna/${name}.patch" "vienna/"
+  fi
 done
 
 echo " > build-stage/deps/JSONKit/ vs deps/JSONKit/"

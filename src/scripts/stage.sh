@@ -47,9 +47,18 @@ find "$VIENNA_DIR" -maxdepth 1 -type d \
 echo " > Copying src/resources/..."
 find "$SRC_DIR/resources" -maxdepth 1 -type f -exec cp {} "$META_DIR/resources/" \;
 
-# Apply patches
+# Apply vienna/deps/resource patches
 echo " > Applying patches..."
 bash "$SRC_DIR/scripts/apply_patches.sh"
+
+# Compat sources — copy after vienna patches so they always win over Vienna versions
+echo " > Copying src/compat/ source..."
+find "$SRC_DIR/compat" -maxdepth 1 \( -name "*.m" -o -name "*.h" \) \
+  -exec cp {} "$META_DIR/source/" \;
+
+# Apply compat patches on top
+echo " > Applying compat patches..."
+bash "$SRC_DIR/scripts/apply_patches.sh" --compat-only
 
 touch "$META_DIR/.stamp"
 echo "=== Staging Complete ==="

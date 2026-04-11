@@ -7,18 +7,20 @@ This document summarizes the technical approach used to compile and deploy **Vie
 ```
 vienna/          # READ ONLY — git submodule, never touch
 deps/            # External dependencies (JSONKit, PSMTabBarControl) — READ ONLY
+src/compat/      # READ ONLY — backported/modified originals, never touch
 patches/
   vienna/        # Patches against vienna/ originals
+  compat/        # Patches against src/compat/ originals
   deps/          # Patches against deps/ originals
   resources/     # Patches against vienna/ resource files
   Info.plist.patch
 src/
-  compat/        # Files graduated from vienna/ — edit directly
+  compat/        # READ ONLY — backported originals (e.g. KeyChain 3.0.0)
   custom/        # Files authored by us — edit directly
   nibs/          # Custom nib builders — edit directly
   resources/     # Custom resource files — edit directly
   scripts/       # Build scripts
-build-stage/      # Generated staging area — do not edit, recreated by make stage
+build-stage/      # Generated staging area — edit freely, run make patches to persist
 ```
 
 ### Which files can I edit directly?
@@ -27,7 +29,7 @@ build-stage/      # Generated staging area — do not edit, recreated by make st
 |---|---|---|
 | `vienna/` | NO | No-touch submodule |
 | `deps/` | NO | Use patches if changes needed |
-| `src/compat/` | YES | Graduated from vienna/; patches not needed |
+| `src/compat/` | NO | Backported originals; use patch workflow via build-stage/ |
 | `src/custom/` | YES | Authored by us |
 | `src/nibs/` | YES | Custom nib builders |
 | `src/resources/` | YES | Custom resources |
@@ -58,42 +60,43 @@ Compiled as a standalone `.dylib` and bundled as a `.framework`. Avoids PPC stat
 
 ## Developer Workflow
 
-### Editing a vienna/ or deps/ file (patch workflow)
+### Editing a vienna/, deps/, or src/compat/ file (patch workflow)
 
 ```bash
 make stage
 $EDITOR build-stage/source/SomeFile.m
 make patches
-make clean && make debug
+make debug
 ```
 
 `build-stage/` contains the fully-patched versions of all files with full context.
-`make patches` diffs `build-stage/` against the originals and saves everything to `patches/`.
+`make patches` diffs `build-stage/source/` against originals: compat files go to
+`patches/compat/`, vienna files go to `patches/vienna/`.
 Files identical to their original have their patch automatically removed.
 
-### Editing src/compat/, src/custom/, or src/nibs/
+### Editing src/custom/ or src/nibs/
 
 ```bash
 $EDITOR src/custom/CrossPlatform.m
-make clean && make debug
+make debug
 ```
 
 ### Quick Reference Flowchart
 
 ```
-[vienna/ or deps/ change]          [src/compat|custom|nibs/ change]
-         ↓                                       ↓
-     make stage                           edit directly
-         ↓                                       ↓
-  edit build-stage/                             ↓
-         ↓                                       ↓
-     make patches                               ↓
-         ↓                                       ↓
-         └──────────────────┬────────────────────┘
-                            ↓
-                    make clean && make debug
-                            ↓
-               ./altivec/altivec_deploy.sh
+[vienna/, deps/, or compat/ change]     [src/custom|nibs/ change]
+              ↓                                    ↓
+          make stage                         edit directly
+              ↓                                    ↓
+       edit build-stage/                          ↓
+              ↓                                    ↓
+          make patches                            ↓
+              ↓                                    ↓
+              └─────────────────┬─────────────────┘
+                                ↓
+                        make debug
+                                ↓
+                   ./altivec/altivec_deploy.sh
 ```
 
 ## AI Assistants

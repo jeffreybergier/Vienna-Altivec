@@ -2,6 +2,7 @@
 # Built for Altivec Intelligence Cross-Compile Environment
 
 APP_NAME = Vienna
+JOBS ?= 6
 
 # --- Toolchain ---
 export MACOSX_DEPLOYMENT_TARGET = 10.4
@@ -190,12 +191,12 @@ patches:
 
 debug: validate_curl
 	@$(MAKE) stage
-	@$(MAKE) build_internal BUILD_DIR=build-debug OPT_FLAGS="-O0 -g"
+	@$(MAKE) -j$(JOBS) build_internal BUILD_DIR=build-debug OPT_FLAGS="-O0 -g"
 	@echo "--- Debug Build Complete: build-debug/Vienna.app ---"
 
 release: validate_curl
 	@$(MAKE) stage
-	@$(MAKE) build_internal BUILD_DIR=build-release OPT_FLAGS="-O3"
+	@$(MAKE) -j$(JOBS) build_internal BUILD_DIR=build-release OPT_FLAGS="-O3"
 	@echo "--- Release Build Complete: build-release/Vienna.app ---"
 
 # --- Internal Build Logic ---
@@ -311,12 +312,13 @@ $(BUILD_DIR)/obj/i386/deps/%.o: $(META_DIR)/deps/%.c
 	@$(CC_X86) $(CFLAGS_BASE) $(ARCH_X86) -c $< -o $@
 
 # Compat sources (from src/compat/ — edit directly, no staging needed)
-$(BUILD_DIR)/obj/ppc/compat/%.o: $(SRC_DIR)/compat/%.m
+# Compat sources (compiled from build-stage/source/ — copied and patched during staging)
+$(BUILD_DIR)/obj/ppc/compat/%.o: $(META_DIR)/source/%.m
 	@mkdir -p $(dir $@)
 	@echo "  > ppc: $(<F)"
 	@$(CC_PPC) $(CFLAGS_BASE) $(OBJC_FLAGS) $(ARCH_PPC) -c $< -o $@
 
-$(BUILD_DIR)/obj/i386/compat/%.o: $(SRC_DIR)/compat/%.m
+$(BUILD_DIR)/obj/i386/compat/%.o: $(META_DIR)/source/%.m
 	@mkdir -p $(dir $@)
 	@echo "  > i386: $(<F)"
 	@$(CC_X86) $(CFLAGS_BASE) $(OBJC_FLAGS) $(ARCH_X86) -c $< -o $@

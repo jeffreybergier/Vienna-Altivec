@@ -5,6 +5,9 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PATCHES_DIR="$REPO_ROOT/patches"
 META_DIR="$REPO_ROOT/build-stage"
 
+COMPAT_ONLY=0
+[ "${1}" = "--compat-only" ] && COMPAT_ONLY=1
+
 apply_dir() {
   local patches_subdir="$1"
   local target_dir="$2"
@@ -17,6 +20,14 @@ apply_dir() {
   done
   popd > /dev/null
 }
+
+if [ "$COMPAT_ONLY" -eq 1 ]; then
+  echo "=== Applying Compat Patches ==="
+  echo " > patches/compat/ → build-stage/source/"
+  apply_dir "$PATCHES_DIR/compat" "$META_DIR/source" 1
+  echo "=== Done ==="
+  exit 0
+fi
 
 echo "=== Applying Patches ==="
 
