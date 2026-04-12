@@ -75,3 +75,17 @@ BOOL createRecursiveDirectory(NSString * path)
 	return [[self componentsSeparatedByString:target] componentsJoinedByString:replacement];
 }
 @end
+
+@implementation NSNumber (XP_Compatibility)
++(NSNumber *)XP_numberWithInteger:(NSInteger)value;
+{
+	SEL sel = @selector(numberWithInteger:);
+	if ([NSNumber respondsToSelector:sel])
+	{
+		typedef NSNumber * (*MethodPtr)(id, SEL, NSInteger);
+		MethodPtr m = (MethodPtr)[NSNumber methodForSelector:sel];
+		return m([NSNumber class], sel, value);
+	}
+	return [NSNumber numberWithInt:(int)value];
+}
+@end

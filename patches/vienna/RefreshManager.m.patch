@@ -1,26 +1,43 @@
---- vienna/RefreshManager.m	2026-04-05 14:14:13.793992907 +0000
-+++ vienna/RefreshManager.m	2026-04-06 21:48:20.172700572 +0000
-@@ -199,14 +199,15 @@
+--- vienna/RefreshManager.m
++++ vienna/RefreshManager.m
+@@ -27,6 +27,7 @@
+ #import "Preferences.h"
+ #import "Constants.h"
+ #import "ViennaApp.h"
++#import "GoogleReader.h"
+ 
+ // Singleton
+ static RefreshManager * _refreshManager = nil;
+@@ -199,8 +200,11 @@
  -(void)refreshSubscriptions:(NSArray *)foldersArray ignoringSubscriptionStatus:(BOOL)ignoreSubStatus
  {
  	statusMessageDuringRefresh = NSLocalizedString(@"Refreshing subscriptions...", nil);
 -		
 -	for (Folder * folder in foldersArray)
 +
++	BOOL grRefreshQueued = NO;
 +	NSEnumerator * enum_folder = [foldersArray objectEnumerator];
 +	Folder * folder;
 +	while ((folder = [enum_folder nextObject]))
  	{
  		if (IsGroupFolder(folder))
  			[self refreshSubscriptions:[[Database sharedDatabase] arrayOfFolders:[folder itemId]] ignoringSubscriptionStatus:NO];
- 		else if (IsRSSFolder(folder))
--		{
--			if (!IsUnsubscribed(folder) || ignoreSubStatus)
-+		{			if (!IsUnsubscribed(folder) || ignoreSubStatus)
- 			{
- 				if (![self isRefreshingFolder:folder ofType:MA_Refresh_Feed])
- 				{
-@@ -228,8 +229,10 @@
+@@ -218,6 +222,14 @@
+ 				}
+ 			}
+ 		}
++		else if (IsGoogleReaderFolder(folder))
++		{
++			if (!grRefreshQueued && (!IsUnsubscribed(folder) || ignoreSubStatus))
++			{
++				[[GoogleReader sharedManager] loadSubscriptions:nil];
++				grRefreshQueued = YES;
++			}
++		}
+ 	}
+ 	[self beginRefreshTimer];
+ }
+@@ -228,8 +240,10 @@
  -(void)refreshFolderIconCacheForSubscriptions:(NSArray *)foldersArray
  {
  	statusMessageDuringRefresh = NSLocalizedString(@"Refreshing folder images...", nil);
@@ -33,7 +50,7 @@
  	{
  		if (IsGroupFolder(folder))
  			[self refreshFolderIconCacheForSubscriptions:[[Database sharedDatabase] arrayOfFolders:[folder itemId]]];
-@@ -239,7 +242,6 @@
+@@ -239,7 +253,6 @@
  		}
  	}
  }
@@ -41,7 +58,7 @@
  /* refreshFavIcon
   * Adds the specified folder to the refreshArray.
   */
-@@ -270,14 +272,15 @@
+@@ -270,14 +283,15 @@
   */
  -(BOOL)isRefreshingFolder:(Folder *)folder ofType:(RefreshTypes)type
  {
@@ -59,7 +76,7 @@
  /* statusMessageDuringRefresh
   * Returns the string to be displayed during a refresh.
   */
-@@ -292,17 +295,18 @@
+@@ -292,17 +306,18 @@
  -(void)cancelAll
  {
  	[refreshArray removeAllObjects];
@@ -81,7 +98,7 @@
  /* totalConnections
   * Returns the current number of concurrent active connections.
   */
-@@ -472,14 +476,16 @@
+@@ -472,14 +487,16 @@
  	
  	// Compute the URL for this connection
  	NSString * urlString = [folder feedURL];
@@ -100,7 +117,7 @@
  	
  	// Seed the activity log for this feed.
  	[aItem clearDetails];
-@@ -546,7 +552,7 @@
+@@ -546,7 +563,7 @@
  		NSString * favIconPath = [NSString stringWithFormat:@"http://%@/favicon.ico", [[[folder homePage] trim] baseURL]];
  		
  		[self setFolderUpdatingFlag:folder flag:YES];
@@ -109,7 +126,7 @@
  							  username:nil
  							  password:nil
  							  delegate:self
-@@ -626,7 +632,7 @@
+@@ -626,7 +643,7 @@
  			}
  			else
  			{
@@ -118,7 +135,7 @@
  				[self removeConnection:connector];
  				return;
  			}
-@@ -654,16 +660,15 @@
+@@ -654,16 +671,15 @@
  					if ([defaultManager fileExistsAtPath:feedSourcePath isDirectory:&isDirectory] && !isDirectory)
  					{
  						NSString * backupPath = [feedSourcePath stringByAppendingPathExtension:@"bak"];
@@ -141,7 +158,7 @@
  			// Create a new rich XML parser instance that will take care of
  			// parsing the XML data we just got.
  			if (newFeed == nil || ![newFeed parseRichXML:receivedData])
-@@ -693,13 +698,14 @@
+@@ -693,13 +709,14 @@
  			NSMutableArray * articleGuidArray = [NSMutableArray array];
  			
  			// Parse off items.
@@ -161,7 +178,7 @@
  				// This routine attempts to synthesize a GUID from an incomplete item that lacks an
  				// ID field. Generally we'll have three things to work from: a link, a title and a
  				// description. The link alone is not sufficiently unique and I've seen feeds where
-@@ -757,7 +763,9 @@
+@@ -757,7 +774,9 @@
  				[folder clearCache];
  				 // Should we wrap the entire loop or just individual article updates?
  				[db beginTransaction];
