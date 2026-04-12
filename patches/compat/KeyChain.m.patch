@@ -27,14 +27,15 @@
  	NSURL * secureUrl = [NSURL URLWithString:url];
  	const char * cServiceName = [[secureUrl host] UTF8String];
  	const char * cUsername = [username UTF8String];
-@@ -36,7 +49,13 @@
+@@ -36,7 +49,14 @@
  	SecProtocolType protocolType = ([[secureUrl scheme] caseInsensitiveCompare:@"https"] == NSOrderedSame) ? kSecProtocolTypeHTTPS : kSecProtocolTypeHTTP;
  	NSString * thePassword;
  
 -	if (!cServiceName || !cUsername)
 +	if (_memKeychain != nil)
 +	{
-+		thePassword = [_memKeychain objectForKey:username];
++		NSString * key = [NSString stringWithFormat:@"internet:%@:%@", username, url];
++		thePassword = [_memKeychain objectForKey:key];
 +		if (!thePassword) thePassword = @"";
 +		NSLog(@"[KeyChain.getPasswordFromKeychain] using memory fallback");
 +	}
@@ -42,7 +43,7 @@
  		thePassword = @"";
  	else
  	{
-@@ -60,14 +79,15 @@
+@@ -60,14 +80,15 @@
  												 &passwordLength,
  												 &passwordPtr,
  												 NULL);
@@ -61,7 +62,7 @@
  	return thePassword;
  }
  
-@@ -76,6 +96,7 @@
+@@ -76,6 +97,7 @@
   */
  +(void)setPasswordInKeychain:(NSString *)password username:(NSString *)username url:(NSString *)url
  {
@@ -69,7 +70,7 @@
  	NSURL * secureUrl = [NSURL URLWithString:url];
  	const char * cServiceName = [[secureUrl host] UTF8String];
  	const char * cUsername = [username UTF8String];
-@@ -85,7 +106,7 @@
+@@ -85,7 +107,7 @@
  	const char * cPassword = [password UTF8String];
  	SecKeychainItemRef itemRef;
  	OSStatus status;
@@ -78,7 +79,7 @@
  	if (!cServiceName || !cUsername || !cPassword)
  		return;
  	status = SecKeychainFindInternetPassword(NULL,
-@@ -105,7 +126,7 @@
+@@ -105,7 +127,7 @@
  											 &itemRef);
  	if (status == noErr)
  		SecKeychainItemDelete(itemRef);
@@ -87,19 +88,20 @@
  								   strlen(cServiceName),
  								   cServiceName,
  								   0,
-@@ -120,6 +141,11 @@
+@@ -120,6 +142,12 @@
  								   strlen(cPassword),
  								   cPassword,
  								   NULL);
 +	if (status == errSecInteractionNotAllowed)
 +	{
-+		[memKeychain() setObject:password forKey:username];
++		NSString * key = [NSString stringWithFormat:@"internet:%@:%@", cUsername, url];
++		[memKeychain() setObject:password forKey:key];
 +		NSLog(@"[KeyChain.setPasswordInKeychain] keychain unavailable, stored in memory fallback");
 +	}
  }
  
  /* getWebPasswordFromKeychain
-@@ -127,15 +153,22 @@
+@@ -127,15 +155,23 @@
   */
  +(NSString *)getWebPasswordFromKeychain:(NSString *)username url:(NSString *)url
  {
@@ -116,14 +118,15 @@
  		thePassword = @"";
 +	else if (_memKeychain != nil)
 +	{
-+		thePassword = [_memKeychain objectForKey:username];
++		NSString * key = [NSString stringWithFormat:@"web:%@:%@", username, url];
++		thePassword = [_memKeychain objectForKey:key];
 +		if (!thePassword) thePassword = @"";
 +		NSLog(@"[KeyChain.getWebPasswordFromKeychain] using memory fallback");
 +	}
  	else
  	{
  		const char * cPath = "";
-@@ -158,14 +191,15 @@
+@@ -158,14 +194,15 @@
  												 &passwordLength,
  												 &passwordPtr,
  												 NULL);
@@ -142,7 +145,7 @@
  	return thePassword;
  }
  
-@@ -174,12 +208,19 @@
+@@ -174,12 +211,20 @@
   */
  +(NSString *)getGenericPasswordFromKeychain:(NSString *)username serviceName:(NSString *)service
  {
@@ -155,14 +158,15 @@
  		thePassword = @"";
 +	else if (_memKeychain != nil)
 +	{
-+		thePassword = [_memKeychain objectForKey:username];
++		NSString * key = [NSString stringWithFormat:@"generic:%@:%@", username, service];
++		thePassword = [_memKeychain objectForKey:key];
 +		if (!thePassword) thePassword = @"";
 +		NSLog(@"[KeyChain.getGenericPasswordFromKeychain] using memory fallback");
 +	}
  	else
  	{
  		UInt32 passwordLength;
-@@ -194,14 +235,15 @@
+@@ -194,14 +239,15 @@
  											 &passwordLength,
  											 &passwordPtr,
  											 NULL);
@@ -181,7 +185,7 @@
  	return thePassword;
  }
  
-@@ -210,6 +252,7 @@
+@@ -210,6 +256,7 @@
   */
  +(void)deleteGenericPasswordInKeychain:(NSString *)username service:(NSString *)service
  {
@@ -189,18 +193,19 @@
  	const char * cServiceName = [service UTF8String];
  	const char * cUsername = [username UTF8String];
  	SecKeychainItemRef itemRef;
-@@ -227,6 +270,10 @@
+@@ -227,6 +274,11 @@
  											 &itemRef);
  	if (status == noErr)
  		SecKeychainItemDelete(itemRef);
 +	else if (status == errSecInteractionNotAllowed)
 +	{
-+		[memKeychain() removeObjectForKey:username];
++		NSString * key = [NSString stringWithFormat:@"generic:%@:%@", username, service];
++		[memKeychain() removeObjectForKey:key];
 +	}
  }
  
  /* setGenericPasswordInKeychain
-@@ -234,6 +281,7 @@
+@@ -234,6 +286,7 @@
   */
  +(void)setGenericPasswordInKeychain:(NSString *)password username:(NSString *)username service:(NSString *)service
  {
@@ -208,7 +213,7 @@
  	const char * cServiceName = [service UTF8String];
  	const char * cUsername = [username UTF8String];
  	const char * cPassword = [password UTF8String];
-@@ -242,7 +290,7 @@
+@@ -242,7 +295,7 @@
  		return;
  
  	[self deleteGenericPasswordInKeychain:username service:service];
@@ -217,13 +222,14 @@
  								   strlen(cServiceName),
  								   cServiceName,
  								   strlen(cUsername),
-@@ -250,6 +298,12 @@
+@@ -250,6 +303,13 @@
  								   strlen(cPassword),
  								   cPassword,
  								   NULL);
 +	if (status == errSecInteractionNotAllowed)
 +	{
-+		[memKeychain() setObject:password forKey:username];
++		NSString * key = [NSString stringWithFormat:@"generic:%@:%@", username, service];
++		[memKeychain() setObject:password forKey:key];
 +		NSLog(@"[KeyChain.setGenericPasswordInKeychain] keychain unavailable, stored in memory fallback");
 +	}
 +	NSLog(@"[KeyChain.setGenericPasswordInKeychain] status=%d%@", status, status == noErr ? @" (success)" : @" (FAILED)");

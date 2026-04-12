@@ -840,7 +840,7 @@
 +    }
 +
 +    [grPassword release];
-+    grPassword = [[KeyChain getPasswordFromKeychain:grUsername url:openReaderHost] retain];
++    grPassword = [[KeyChain getGenericPasswordFromKeychain:grUsername serviceName:@"Vienna sync"] retain];
 +    [APIBaseURL release];
 +    APIBaseURL = [[NSString stringWithFormat:@"https://%@/reader/api/0/", openReaderHost] retain];
 +
