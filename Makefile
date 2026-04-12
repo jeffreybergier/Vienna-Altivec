@@ -1,5 +1,13 @@
 # Standalone Makefile for Vienna 2.2.0 (Mac) - Targeting PPC and i386
 # Built for Altivec Intelligence Cross-Compile Environment
+#
+# Dependency Graph:
+#   stage   --> clean
+#   debug   --> check --> package --> (BUNDLE)
+#   release --> check --> package --> (BUNDLE)
+#   patches    (standalone)
+#   clean      (standalone)
+#   check      (standalone)
 
 APP_NAME = Vienna
 JOBS ?= 6
@@ -173,36 +181,32 @@ LDFLAGS_BASE = \
 LDFLAGS_PSM = \
   -framework AppKit -framework Foundation -lobjc -lgcc_s.10.4
 
-.PHONY: all clean debug release build_internal stage patches validate_curl
+.PHONY: clean debug release package stage patches check
 
-all: debug
-
-validate_curl:
+check:
 	@if [ ! -f "$(CURL_DIR)/lib/libAICURLConnection.a" ]; then \
 		echo " [!] ERROR: libcurl not built. Run: docker compose run --rm altivec \"cd /repo/altivec/libs/libcurl && make mac\""; \
 		exit 1; \
 	fi
 
-stage:
+stage: clean
 	@bash $(SRC_DIR)/scripts/stage.sh
 
 patches:
 	@bash $(SRC_DIR)/scripts/generate_patches.sh
 
-debug: validate_curl
-	@$(MAKE) stage
-	@$(MAKE) -j$(JOBS) build_internal BUILD_DIR=build-debug OPT_FLAGS="-O0 -g"
+debug: check
+	@$(MAKE) -j$(JOBS) package BUILD_DIR=build-debug OPT_FLAGS="-O0 -g"
 	@echo "--- Debug Build Complete: build-debug/Vienna.app ---"
 
-release: validate_curl
-	@$(MAKE) stage
-	@$(MAKE) -j$(JOBS) build_internal BUILD_DIR=build-release OPT_FLAGS="-O3"
+release: check
+	@$(MAKE) -j$(JOBS) package BUILD_DIR=build-release OPT_FLAGS="-O3"
 	@echo "--- Release Build Complete: build-release/Vienna.app ---"
 
 # --- Internal Build Logic ---
 # The ifeq guard prevents BUILD_DIR-dependent variable expansions from running
 # at parse time. Without it, addprefix/addsuffix calls would see the wrong BUILD_DIR.
-ifeq ($(filter build_internal,$(MAKECMDGOALS)),build_internal)
+ifeq ($(filter package,$(MAKECMDGOALS)),package)
 
   PPC_VIENNA_OBJS = $(addprefix $(BUILD_DIR)/obj/ppc/source/, $(VIENNA_SOURCES:.m=.o))
   X86_VIENNA_OBJS = $(addprefix $(BUILD_DIR)/obj/i386/source/, $(VIENNA_SOURCES:.m=.o))
@@ -234,7 +238,7 @@ ifeq ($(filter build_internal,$(MAKECMDGOALS)),build_internal)
 
 endif
 
-build_internal: $(BUNDLE)
+package: $(BUNDLE)
 	@echo " [6/6] Zipping bundle..."
 	@cd $(BUILD_DIR) && zip -q -r $(APP_NAME).zip $(APP_NAME).app
 

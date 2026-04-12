@@ -60,16 +60,33 @@ Compiled as a standalone `.dylib` and bundled as a `.framework`. Avoids PPC stat
 
 ## Developer Workflow
 
-### Editing a vienna/, deps/, or src/compat/ file (patch workflow)
+### Clean Build
 
 ```bash
-make stage
+make stage && make debug
+```
+
+`make stage` runs `make clean` automatically, then re-stages all sources and applies patches.
+`make debug` compiles incrementally from whatever is in `build-stage/`.
+
+### Incremental Debug Loop (editing build-stage/ directly)
+
+```bash
 $EDITOR build-stage/source/SomeFile.m
-make patches
 make debug
 ```
 
-`build-stage/` contains the fully-patched versions of all files with full context.
+`make debug` does NOT call `make stage`, so edits in `build-stage/` are preserved between builds.
+
+### Persisting Changes Back to Patches
+
+Once debugging is working, persist the changes:
+
+```bash
+make patches
+make stage && make debug   # confirm clean build still works
+```
+
 `make patches` diffs `build-stage/source/` against originals: compat files go to
 `patches/compat/`, vienna files go to `patches/vienna/`.
 Files identical to their original have their patch automatically removed.
@@ -81,22 +98,24 @@ $EDITOR src/custom/CrossPlatform.m
 make debug
 ```
 
+No staging needed — these files are compiled directly from `src/`.
+
 ### Quick Reference Flowchart
 
 ```
 [vienna/, deps/, or compat/ change]     [src/custom|nibs/ change]
               ↓                                    ↓
-          make stage                         edit directly
+   make stage && make debug               edit directly
               ↓                                    ↓
-       edit build-stage/                          ↓
-              ↓                                    ↓
-          make patches                            ↓
-              ↓                                    ↓
-              └─────────────────┬─────────────────┘
-                                ↓
-                        make debug
-                                ↓
-                   ./altivec/altivec_deploy.sh
+       edit build-stage/                     make debug
+              ↓
+          make debug  (incremental)
+              ↓
+          make patches  (persist)
+              ↓
+   make stage && make debug  (confirm)
+              ↓
+   ./altivec/altivec_deploy.sh
 ```
 
 ## AI Assistants
@@ -112,7 +131,6 @@ make debug
 
 ## Common Pitfalls
 
-- **Forgetting `make clean` before rebuild**: Old `.o` files prevent recompilation. Use `strings` to verify if code made it into the binary.
 - **Forgetting `make patches` after editing build-stage/**: Changes in `build-stage/` are lost on the next `make stage`. Always run `make patches` to persist them.
 - **Editing `build-stage/` without staging first**: Run `make stage` to populate it before editing.
 - **Resource files not found**: Ensure `src/resources/` contains the needed `.tiff` and `.plist` files.
