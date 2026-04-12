@@ -1,5 +1,5 @@
---- vienna/ArticleListView.m	2026-04-07 13:09:04.204528206 +0000
-+++ vienna/ArticleListView.m	2026-04-07 13:11:21.636001879 +0000
+--- vienna/ArticleListView.m
++++ vienna/ArticleListView.m
 @@ -29,7 +29,6 @@
  #import "FoldersTree.h"
  #import "CalendarExtensions.h"
@@ -131,3 +131,12 @@
  		}
  	}
  	
+@@ -1872,7 +1874,7 @@
+ 	if (pathToErrorPage != nil)
+ 	{
+ 		NSString *errorMessage = [NSString stringWithContentsOfFile:pathToErrorPage encoding:NSUTF8StringEncoding error:NULL];
+-		errorMessage = [errorMessage stringByReplacingOccurrencesOfString: @"$ErrorInformation" withString: [error localizedDescription]];
++		errorMessage = [errorMessage XP_stringByReplacingOccurrencesOfString:@"$ErrorInformation" withString:[error localizedDescription]];
+ 		if (errorMessage != nil)
+ 			[frame loadAlternateHTMLString:errorMessage baseURL:[NSURL fileURLWithPath:pathToErrorPage isDirectory:NO] forUnreachableURL:[[dataSource request] URL]];
+ 	}		

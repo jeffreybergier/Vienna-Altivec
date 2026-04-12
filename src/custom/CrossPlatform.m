@@ -74,6 +74,21 @@ BOOL createRecursiveDirectory(NSString * path)
 {
 	return [[self componentsSeparatedByString:target] componentsJoinedByString:replacement];
 }
+-(NSString *)XP_stringByReplacingOccurrencesOfString:(NSString *)target withString:(NSString *)replacement options:(NSStringCompareOptions)options range:(NSRange)searchRange;
+{
+	SEL sel = @selector(stringByReplacingOccurrencesOfString:withString:options:range:);
+	if ([self respondsToSelector:sel])
+	{
+		typedef NSString * (*MethodPtr)(id, SEL, NSString *, NSString *, NSStringCompareOptions, NSRange);
+		MethodPtr m = (MethodPtr)[self methodForSelector:sel];
+		return m(self, sel, target, replacement, options, searchRange);
+	}
+	NSString * before = [self substringToIndex:searchRange.location];
+	NSString * within = [self substringWithRange:searchRange];
+	NSString * after  = [self substringFromIndex:searchRange.location + searchRange.length];
+	NSString * replaced = [[within componentsSeparatedByString:target] componentsJoinedByString:replacement];
+	return [[before stringByAppendingString:replaced] stringByAppendingString:after];
+}
 @end
 
 @implementation NSNumber (XP_Compatibility)

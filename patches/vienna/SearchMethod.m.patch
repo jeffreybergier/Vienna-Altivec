@@ -1,5 +1,5 @@
---- vienna/SearchMethod.m	2026-04-07 10:53:55.867230168 +0000
-+++ vienna/SearchMethod.m	2026-04-07 11:10:03.502954308 +0000
+--- vienna/SearchMethod.m
++++ vienna/SearchMethod.m
 @@ -20,7 +20,6 @@
  
  
@@ -8,3 +8,12 @@
  #import "AppController.h"
  
  @implementation SearchMethod
+@@ -120,7 +119,7 @@
+ - (NSURL *)queryURLforSearchString:(NSString *)searchString;
+ {
+ 	NSURL * queryURL;
+-	NSString * temp = [[self searchQueryString] stringByReplacingOccurrencesOfString:@"$SearchTerm$" withString:searchString];
++	NSString * temp = [[self searchQueryString] XP_stringByReplacingOccurrencesOfString:@"$SearchTerm$" withString:searchString];
+ 	queryURL = cleanedUpAndEscapedUrlFromString(temp);
+     return queryURL;
+ }

@@ -25,6 +25,7 @@ BOOL createRecursiveDirectory(NSString * path);
 
 @interface NSString (XP_Compatibility)
 -(NSString *)XP_stringByReplacingOccurrencesOfString:(NSString *)target withString:(NSString *)replacement;
+-(NSString *)XP_stringByReplacingOccurrencesOfString:(NSString *)target withString:(NSString *)replacement options:(NSStringCompareOptions)options range:(NSRange)searchRange;
 @end
 
 @interface NSNumber (XP_Compatibility)

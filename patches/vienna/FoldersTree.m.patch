@@ -1,5 +1,5 @@
---- vienna/FoldersTree.m	2026-04-07 13:09:04.212992030 +0000
-+++ vienna/FoldersTree.m	2026-04-07 13:11:21.977295725 +0000
+--- vienna/FoldersTree.m
++++ vienna/FoldersTree.m
 @@ -23,7 +23,6 @@
  #import "AppController.h"
  #import "Constants.h"
@@ -37,6 +37,15 @@
  			int count = [listOfSubFolders count];
  			TreeNode * subNode;
  
+@@ -342,7 +342,7 @@
+ 		node = rootNode;
+ 	else
+ 		node = [rootNode nodeFromID:folderId];
+-	if ([node folder] != nil && IsRSSFolder([node folder]))
++	if ([node folder] != nil && (IsRSSFolder([node folder]) || IsGoogleReaderFolder([node folder])))
+ 		[array addObject:[node folder]];
+ 	node = [node firstChild];
+ 	while (node != nil)
 @@ -1150,7 +1150,7 @@
  			[stringDragData appendString:feedURL];
  			[stringDragData appendString:@"\n"];
