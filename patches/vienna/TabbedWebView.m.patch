@@ -1,11 +1,15 @@
---- vienna/TabbedWebView.m	2026-04-07 10:53:55.912601741 +0000
-+++ vienna/TabbedWebView.m	2026-04-07 13:11:21.683859504 +0000
-@@ -172,7 +172,7 @@
- 		// Indicate a redirect for a feed
- 		[self setIsFeedRedirect:YES];
+--- vienna/TabbedWebView.m
++++ vienna/TabbedWebView.m
+@@ -31,9 +31,12 @@
+ @end
  
--		[controller openURLInDefaultBrowser:[NSURL URLWithString:[NSString stringWithFormat:@"feed://%@", linkPath]]];
-+		[controller openURLInDefaultBrowser:[NSURL XP_URLWithString:[NSString stringWithFormat:@"feed://%@", linkPath]]];
- 		[listener ignore];
- 		return;
- 	}
+ @interface TabbedWebView (Private)
++	-(void)initTabbedWebView;
+ 	-(BOOL)isDownloadFileType:(NSURL *)filename;
+ 	-(void)loadMinimumFontSize;
+ 	-(void)handleMinimumFontSizeChange:(NSNotification *)nc;
++	-(void)loadUseWebPlugins;
++	-(void)loadUseJavaScript;
+ @end
+ 
+ static NSString * _userAgent ;

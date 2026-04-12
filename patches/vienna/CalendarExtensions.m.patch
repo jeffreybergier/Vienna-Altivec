@@ -1,0 +1,20 @@
+--- vienna/CalendarExtensions.m
++++ vienna/CalendarExtensions.m
+@@ -72,7 +72,7 @@
+ 	}
+ 	else
+ 	{
+-		theDate = [NSDateFormatter localizedStringFromDate:self dateStyle:NSDateFormatterShortStyle timeStyle:NSDateFormatterNoStyle];
++		theDate = [NSDateFormatter XP_localizedStringFromDate:self dateStyle:NSDateFormatterShortStyle timeStyle:NSDateFormatterNoStyle];
+ 	}
+ 	
+ 	// If the time is 12.00 then replace with Noon or Midnight as appropriate.
+@@ -89,7 +89,7 @@
+ 	}
+ 	else
+ 	{
+-		theTime = [NSDateFormatter localizedStringFromDate:self dateStyle:NSDateFormatterNoStyle timeStyle:NSDateFormatterShortStyle];
++		theTime = [NSDateFormatter XP_localizedStringFromDate:self dateStyle:NSDateFormatterNoStyle timeStyle:NSDateFormatterShortStyle];
+ 	}
+ 	return [NSString stringWithFormat:NSLocalizedString(@"%@ at %@", nil), theDate, theTime];
+ }

@@ -1,71 +1,11 @@
---- vienna/Preferences.m	2026-04-07 13:21:56.043927797 +0000
-+++ vienna/Preferences.m	2026-04-08 12:42:27.815618367 +0000
-@@ -22,7 +22,6 @@
+--- vienna/Preferences.m
++++ vienna/Preferences.m
+@@ -22,7 +22,7 @@
  #import "Constants.h"
- #import "Message.h"
+ #import "Article.h"
  #import "SearchMethod.h"
 -#import <Sparkle/Sparkle.h>
++// #import <Sparkle/Sparkle.h> — stubs.h pre-included
  
  // Initial paths
  NSString * MA_ApplicationSupportFolder = @"~/Library/Application Support/Vienna";
-@@ -1034,12 +1033,12 @@
- }
- 
- -(void)createFeedSourcesFolderIfNecessary
--{	
-+{
- 	BOOL isDirectory = NO;
- 	if (![[NSFileManager defaultManager] fileExistsAtPath:feedSourcesFolder isDirectory:&isDirectory])
- 	{
- 		NSError * error = nil;
--		if (![[NSFileManager defaultManager] createDirectoryAtPath:feedSourcesFolder withIntermediateDirectories:YES attributes:nil error:&error])
-+		if (![[NSFileManager defaultManager] XP_createDirectoryAtPath:feedSourcesFolder withIntermediateDirectories:YES attributes:nil error:&error])
- 		{
- 			NSLog(@"Could not create feed sources folder at path '%@'. Error: %@", feedSourcesFolder, [error localizedDescription]);
- 		}
-@@ -1051,4 +1050,45 @@
- 	}
- }
- 
-+/* syncGoogleReader
-+ * Returns whether Open Reader sync is enabled.
-+ */
-+-(BOOL)syncGoogleReader
-+{
-+	return [self boolForKey:@"SyncGoogleReader"];
-+}
-+
-+-(void)setSyncGoogleReader:(BOOL)flag
-+{
-+	[self setBool:flag forKey:@"SyncGoogleReader"];
-+}
-+
-+/* syncServer
-+ * Returns the Open Reader server hostname.
-+ */
-+-(NSString *)syncServer
-+{
-+	NSString * server = [self stringForKey:@"SyncServer"];
-+	return server ? server : @"";
-+}
-+
-+-(void)setSyncServer:(NSString *)newServer
-+{
-+	[self setString:newServer forKey:@"SyncServer"];
-+}
-+
-+/* syncingUser
-+ * Returns the Open Reader account username.
-+ */
-+-(NSString *)syncingUser
-+{
-+	NSString * user = [self stringForKey:@"SyncingUser"];
-+	return user ? user : @"";
-+}
-+
-+-(void)setSyncingUser:(NSString *)newUser
-+{
-+	[self setString:newUser forKey:@"SyncingUser"];
-+}
-+
- @end

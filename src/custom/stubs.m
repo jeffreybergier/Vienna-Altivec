@@ -10,13 +10,52 @@
 @end
 
 @implementation SUUpdater
++(SUUpdater *)sharedUpdater;
+{
+    static SUUpdater * sharedInstance = nil;
+    if (!sharedInstance)
+        sharedInstance = [[SUUpdater alloc] init];
+    return sharedInstance;
+}
+
++(SUUpdater *)updaterForBundle:(NSBundle *)bundle;
+{
+    (void)bundle;
+    return [SUUpdater sharedUpdater];
+}
+
+-(void)setSendsSystemProfile:(BOOL)sends;
+{
+    (void)sends;
+}
+
+-(BOOL)sendsSystemProfile;
+{
+    return NO;
+}
+
+-(void)setAutomaticallyChecksForUpdates:(BOOL)flag;
+{
+    (void)flag;
+}
+
+-(BOOL)automaticallyChecksForUpdates;
+{
+    return NO;
+}
+
+-(void)setFeedURL:(NSURL *)feedURL;
+{
+    (void)feedURL;
+}
+
 -(void)awakeFromNib;
 {
-    NSLog(@"[SUUpdater] Stub initialized from NIB");
+    NSLog(@"[SUUpdater.awakeFromNib] stub");
 }
 
 -(void)checkForUpdates:(id)sender;
 {
-    NSLog(@"[SUUpdater] checkForUpdates: called (Stub)");
+    NSLog(@"[SUUpdater.checkForUpdates] stub");
 }
 @end

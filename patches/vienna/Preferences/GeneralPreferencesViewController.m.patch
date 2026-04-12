@@ -1,0 +1,105 @@
+--- vienna/Preferences/GeneralPreferencesViewController.m
++++ vienna/Preferences/GeneralPreferencesViewController.m
+@@ -38,15 +38,13 @@
+ @implementation GeneralPreferencesViewController
+ 
+ 
+-- (instancetype)init {
++- (id)init {
+     return [super initWithNibName:@"GeneralPreferencesView" bundle:nil];
+ }
+ 
+ 
+ - (void)viewWillAppear {
+-    if([NSViewController instancesRespondToSelector:@selector(viewWillAppear)]) {
+-        [super viewWillAppear];
+-    }
++    [super viewWillAppear];
+     
+     [self initializePreferences];
+     
+@@ -282,22 +280,21 @@
+     [openPanel setCanChooseDirectories:YES];
+     [openPanel setCanCreateDirectories:YES];
+     [openPanel setCanChooseFiles:NO];
+-    [openPanel setDirectoryURL:[[NSFileManager defaultManager] URLForDirectory:NSDownloadsDirectory inDomain:NSUserDomainMask appropriateForURL:nil create:YES error:nil]];
+-    [openPanel beginSheetModalForWindow:prefPaneWindow completionHandler:^(NSInteger returnCode) {
+-        // Force the focus back to the main preferences pane
+-        [openPanel orderOut:self];
+-        [prefPaneWindow makeKeyAndOrderFront:prefPaneWindow];
+-        
+-        if (returnCode == NSOKButton)
+-        {
+-            NSString * downloadFolderPath = [[openPanel directoryURL] path];
+-            [[Preferences standardPreferences] setDownloadFolder:downloadFolderPath];
+-            [self updateDownloadsPopUp:downloadFolderPath];
+-        }
+-        
+-        if (returnCode == NSCancelButton)
+-            [downloadFolder selectItemAtIndex:0];
+-    }];
++    NSArray * paths = NSSearchPathForDirectoriesInDomains(NSDownloadsDirectory, NSUserDomainMask, YES);
++    if ([paths count] > 0)
++        [openPanel setDirectory:[paths objectAtIndex:0]];
++    NSInteger returnCode = [openPanel runModal];
++    // Force the focus back to the main preferences pane
++    [openPanel orderOut:self];
++    [prefPaneWindow makeKeyAndOrderFront:prefPaneWindow];
++    if (returnCode == NSOKButton)
++    {
++        NSString * downloadFolderPath = [openPanel directory];
++        [[Preferences standardPreferences] setDownloadFolder:downloadFolderPath];
++        [self updateDownloadsPopUp:downloadFolderPath];
++    }
++    if (returnCode == NSCancelButton)
++        [downloadFolder selectItemAtIndex:0];
+ }
+ 
+ /* updateDownloadsPopUp
+@@ -358,20 +355,16 @@
+  */
+ -(IBAction)handleLinkSelector:(id)sender
+ {
+-    NSOpenPanel * panel = [NSOpenPanel openPanel];
+-    NSWindow * prefPaneWindow = [linksHandler window];
+-    
+-    [panel setDirectoryURL:[[NSFileManager defaultManager] URLForDirectory:NSApplicationDirectory inDomain:NSLocalDomainMask appropriateForURL:nil create:NO error:nil]];
++    NSOpenPanel * panel = [NSOpenPanel openPanel];    
++    [panel setDirectory:@"/Applications"];
+     [panel setAllowedFileTypes:[NSArray arrayWithObjects:NSFileTypeForHFSTypeCode('APPL'), nil]];
+-    [panel beginSheetModalForWindow:prefPaneWindow completionHandler:^(NSInteger returnCode) {
+-        [panel orderOut:self];
+-        NSWindow * prefPaneWindow = [linksHandler window];
+-        [prefPaneWindow makeKeyAndOrderFront:self];
+-        
+-        if (returnCode == NSOKButton)
+-            [self setDefaultLinksHandler:[panel URL]];
+-        [self refreshLinkHandler];
+-    }];
++    NSInteger returnCode = [panel runModal];
++    [panel orderOut:self];
++    NSWindow * prefPaneWindow = [linksHandler window];
++    [prefPaneWindow makeKeyAndOrderFront:self];
++    if (returnCode == NSOKButton)
++        [self setDefaultLinksHandler:[panel URL]];
++    [self refreshLinkHandler];
+ }
+ 
+ /* setDefaultLinksHandler
+@@ -379,11 +372,14 @@
+  */
+ -(void)setDefaultLinksHandler:(NSURL *)fileURLToNewHandler
+ {
++    NSLog(@"[GeneralPreferencesViewController setDefaultLinksHandler:] tried to set default links handler %@", fileURLToNewHandler);
++/*
+     NSBundle * appBundle = [NSBundle bundleWithURL:fileURLToNewHandler];
+     NSDictionary * fileAttributes = [appBundle infoDictionary];
+-    CFStringRef bundleIdentifier = (__bridge CFStringRef)[fileAttributes objectForKey:@"CFBundleIdentifier"];
+-    CFStringRef scheme = (__bridge CFStringRef)@"feed";
++    CFStringRef bundleIdentifier = (CFStringRef)[fileAttributes objectForKey:@"CFBundleIdentifier"];
++    CFStringRef scheme = (CFStringRef)@"feed";
+     LSSetDefaultHandlerForURLScheme(scheme, bundleIdentifier);
++*/
+ }
+ 
+ /* changeCheckFrequency

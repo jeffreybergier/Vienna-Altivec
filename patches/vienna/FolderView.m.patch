@@ -1,0 +1,26 @@
+--- vienna/FolderView.m
++++ vienna/FolderView.m
+@@ -291,12 +291,12 @@
+ 		NSRect selectedRect = [self rectOfRow:rowIndex];
+ 		if (NSIntersectsRect(selectedRect, rect))
+ 		{
+-			[blueGradient drawInRect:selectedRect fromRect:iRect operation:NSCompositeSourceOver fraction:1 respectFlipped:YES hints:nil];
++			[blueGradient XP_drawInRect:selectedRect fromRect:iRect operation:NSCompositeSourceOver fraction:1 respectFlipped:YES hints:nil];
+ 
+ 			if ([self editedRow] == -1)
+ 			{
+ 				if ([[self window] firstResponder] != self || ![[self window] isKeyWindow])
+-					[grayGradient drawInRect:selectedRect fromRect:iRect operation:NSCompositeSourceOver fraction:1 respectFlipped:YES hints:nil];
++					[grayGradient XP_drawInRect:selectedRect fromRect:iRect operation:NSCompositeSourceOver fraction:1 respectFlipped:YES hints:nil];
+ 			}
+ 			if ([self editedRow] != -1)
+ 				[self performSelector:@selector(prvtResizeTheFieldEditor) withObject:nil afterDelay:0.001];
+@@ -338,7 +338,7 @@
+ 		// Get rid of the white border, leftover from resizing the fieldEditor..
+ 		editRect.origin.x -= 6;
+ 		editRect.size.width += 6;
+-		[blueGradient drawInRect:editRect fromRect:iRect operation:NSCompositeSourceOver fraction:1 respectFlipped:YES hints:nil];
++		[blueGradient XP_drawInRect:editRect fromRect:iRect operation:NSCompositeSourceOver fraction:1 respectFlipped:YES hints:nil];
+ 		
+ 		// Put back any cell image
+ 		int editColumnIndex = [self editedColumn];

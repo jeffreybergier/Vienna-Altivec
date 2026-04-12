@@ -1,16 +1,20 @@
---- vienna/AppController.h	2026-04-07 13:21:55.950319921 +0000
-+++ vienna/AppController.h	2026-04-08 12:42:26.685470923 +0000
-@@ -22,7 +22,6 @@
+--- vienna/AppController.h
++++ vienna/AppController.h
+@@ -22,7 +22,7 @@
  #import "Database.h"
  #import "ArticleController.h"
  #import "ActivityViewer.h"
--#import <Growl/GrowlApplicationBridge.h>
+-#import <Growl/Growl.h>
++// #import <Growl/Growl.h> — stubs.h pre-included
  #import "DownloadWindow.h"
  #import "FilterView.h"
  #import "PopupButton.h"
-@@ -211,4 +210,5 @@
- -(void)performWebSearch:(SearchMethod *)searchMethod;
- -(void)performAllArticlesSearch;
- -(void)performWebPageSearch;
-+-(void)createNewGoogleReaderSubscription:(NSString *)url underFolder:(int)parentId withTitle:(NSString *)title afterChild:(int)predecessorId;
- @end
+@@ -106,7 +106,7 @@
+ }
+ 
+ @property (nonatomic, readonly) NSWindowController *preferencesWindowController;
+-@property(nonatomic, retain) NewSubscription *rssFeed;
++@property(nonatomic, readonly) NewSubscription *rssFeed;
+ 
+ // Menu action items
+ -(IBAction)handleAbout:(id)sender;

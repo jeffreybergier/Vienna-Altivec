@@ -1,29 +1,39 @@
---- vienna/ArticleView.m	2026-04-07 10:53:55.834398008 +0000
-+++ vienna/ArticleView.m	2026-04-07 11:10:02.979373720 +0000
-@@ -22,7 +22,6 @@
- #import "ArticleView.h"
- #import "AppController.h"
- #import "Preferences.h"
--#import "HelperFunctions.h"
- #import "StringExtensions.h"
- #import <WebKit/WebKit.h>
- #import "BrowserView.h"
-@@ -93,8 +92,7 @@
- 	if (stylePathMappings == nil)
- 		stylePathMappings = [[NSMutableDictionary alloc] init];
- 	
--	NSString * path = [[[NSBundle mainBundle] sharedSupportPath] stringByAppendingPathComponent:@"Styles"];
--	loadMapFromPath(path, stylePathMappings, YES, nil);
-+	NSString * path = [[[[NSBundle mainBundle] resourcePath] stringByDeletingLastPathComponent] stringByAppendingPathComponent:@"SharedSupport/Styles"];	loadMapFromPath(path, stylePathMappings, YES, nil);
- 	
- 	path = [[Preferences standardPreferences] stylesFolder];
- 	loadMapFromPath(path, stylePathMappings, YES, nil);
-@@ -115,7 +113,7 @@
+--- vienna/ArticleView.m
++++ vienna/ArticleView.m
+@@ -120,7 +120,12 @@
  	if (path != nil)
  	{
  		NSString * filePath = [path stringByAppendingPathComponent:@"template.html"];
 -		NSString * templateString = [NSString stringWithContentsOfFile:filePath usedEncoding:NULL error:NULL];
-+		NSString * templateString = [NSString stringWithContentsOfFile:filePath];
++		NSStringEncoding usedEncoding = NSUTF8StringEncoding;
++		NSError * readError = nil;
++		NSString * templateString = [NSString stringWithContentsOfFile:filePath encoding:NSUTF8StringEncoding error:&readError];
++		if (templateString == nil)
++			templateString = [NSString stringWithContentsOfFile:filePath encoding:NSISOLatin1StringEncoding error:NULL];
++		(void)usedEncoding; (void)readError;
  		// Sanity check the file. Obviously anything bigger than 0 bytes but smaller than a valid template
  		// format is a problem but we'll worry about that later. There's only so much rope we can give.
  		if (templateString != nil && [templateString length] > 0u)
+@@ -147,9 +152,19 @@
+ 		}
+ 	}
+ 	
+-	// If the template is invalid, revert to the default style
+-	// which should ALWAYS be valid.
+-	NSAssert(![styleName isEqualToString:@"Default"], @"Default style is corrupted!");
++	// If the template is invalid, revert to the default style.
++	if ([styleName isEqualToString:@"Default"]) {
++		NSLog(@"[ArticleView.initForStyle] Default style could not be loaded from path: %@", path);
++		// Use a minimal built-in template so we don't crash
++		[htmlTemplate release];
++		htmlTemplate = [@"<html><body>$ArticleBody$</body></html>" retain];
++		[cssStylesheet release];
++		cssStylesheet = nil;
++		[jsScript release];
++		jsScript = nil;
++		[[NSNotificationCenter defaultCenter] postNotificationName:@"MA_Notify_ArticleViewChange" object:nil];
++		return YES;
++	}
+ 	
+ 	// Warn the user.
+ 	NSString * titleText = [NSString stringWithFormat:NSLocalizedString(@"Invalid style title", nil), styleName];

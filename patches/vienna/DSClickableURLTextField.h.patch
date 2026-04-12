@@ -1,9 +1,0 @@
---- vienna/DSClickableURLTextField.h	2026-04-07 10:53:55.838540590 +0000
-+++ vienna/DSClickableURLTextField.h	2026-04-07 11:10:03.319878117 +0000
-@@ -65,4 +65,4 @@
- 
- @interface NSObject (DSClickableURLTextFieldDelegate)
- - (BOOL)textField:(id)textField openURL:(NSURL*)url;
--@end
-\ No newline at end of file
-+@end

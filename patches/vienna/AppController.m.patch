@@ -1,31 +1,59 @@
 --- vienna/AppController.m
 +++ vienna/AppController.m
-@@ -46,15 +46,13 @@
- #import "Preferences.h"
- #import "InfoWindow.h"
- #import "DownloadManager.h"
--#import "HelperFunctions.h"
- #import "ArticleFilter.h"
- #import "ToolbarItem.h"
+@@ -58,7 +58,7 @@
  #import "ClickableProgressIndicator.h"
  #import "SearchPanel.h"
  #import "SearchMethod.h"
 -#import <Sparkle/Sparkle.h>
-+#import "SyncPreferences.h"
++// #import <Sparkle/Sparkle.h> — stubs.h pre-included
  #import <WebKit/WebKit.h>
--#import <Growl/GrowlDefines.h>
  #include <mach/mach_port.h>
  #include <mach/mach_interface.h>
- #include <mach/mach_init.h>
-@@ -418,6 +416,7 @@
+@@ -121,6 +121,9 @@
+ 	-(void)searchArticlesWithString:(NSString *)searchString;
+ 	-(void)sourceWindowWillClose:(NSNotification *)notification;
+ 	-(IBAction)cancelAllRefreshesToolbar:(id)sender;
++	-(void)showSystemProfileInfoAlert;
++	-(BOOL)handleKeyDown:(unichar)keyChar withFlags:(NSUInteger)flags;
++	-(IBAction)markReadToggle:(id)sender;
+ @end
+ 
+ // Static constant strings that are typically never tweaked
+@@ -160,7 +163,7 @@
+ 	@"EEE dd MMM yy HH:mmss",      @"EEE dd MMM yyyy HH:mmss",
+ 	@"EEEE dd MMMM yy",            @"EEEE dd MMMM yyyy",
+ };
+-static const size_t kNumberOfDateFormatters = sizeof(kDateFormats) / sizeof(kDateFormats[0]);
++#define kNumberOfDateFormatters 26
+ // C array of NSDateFormatter's : creating a NSDateFormatter is very expensive, so we create
+ //  those we need early in the program launch and keep them in memory.
+ static NSDateFormatter * dateFormatterArray[kNumberOfDateFormatters];
+@@ -168,8 +171,6 @@
+ static NSLock * dateFormatters_lock;
+ static NSLocale * enUSLocale;
+ 
+-@synthesize rssFeed = _rssFeed;
+-
+ /* init
+  * Class instance initialisation.
   */
- -(void)applicationDidFinishLaunching:(NSNotification *)aNot
+@@ -198,14 +199,8 @@
+ -(void)awakeFromNib
  {
-+	NSLog(@"[AppController.applicationDidFinishLaunching] Hello from Altivec Intelligence");
+ 
+-#if ( MAC_OS_X_VERSION_MAX_ALLOWED < 1070 && !defined(NSWindowCollectionBehaviorFullScreenPrimary) )
+-    enum {
+-        NSWindowCollectionBehaviorFullScreenPrimary = (1 << 7)
+-    };
+-#endif
+-	
+     //Enable FullScreen Support if we are on Lion 10.7.x
+-    [mainWindow setCollectionBehavior:NSWindowCollectionBehaviorFullScreenPrimary];
++    [mainWindow XP_setCollectionBehavior:NSWindowCollectionBehaviorFullScreenPrimary];
+   	
+ 
  	Preferences * prefs = [Preferences standardPreferences];
- 	
- 	// Register a bunch of notifications
-@@ -458,8 +457,8 @@
+@@ -509,8 +504,8 @@
  	[mainWindow setToolbar:toolbar];
  	
  	// Give the status bar and filter string an embossed look
@@ -36,336 +64,136 @@
  	[currentFilterTextField setStringValue:@""];
  	
  	// Preload dictionary of standard URLs
-@@ -546,6 +545,10 @@
- 	// Kick off an initial refresh
- 	if ([prefs refreshOnStartup])
- 		[self refreshAllSubscriptions:self];
-+
-+	// TEMP: Show Sync Preferences window after a short delay for early sync testing.
-+	// Delay gives the main window time to settle before we bring the sync window forward.
-+	[self performSelector:@selector(_showSyncPrefsDebug) withObject:nil afterDelay:2.0];
- }
- 
- /* applicationShouldHandleReopen
-@@ -777,28 +780,30 @@
- 
- 	[cellMenu addItem: [NSMenuItem separatorItem]];
- 
--	// Add all built-in search methods to the menu. 
--	for (searchMethod in [SearchMethod builtInSearchMethods])
-+	// Add all built-in search methods to the menu.
-+	NSEnumerator * enum_builtIn = [[SearchMethod builtInSearchMethods] objectEnumerator];
-+	while ((searchMethod = [enum_builtIn nextObject]))
- 	{
- 		friendlyName = [searchMethod friendlyName];
- 		item = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(friendlyName, nil) action:@selector(setSearchMethod:) keyEquivalent:@""];
- 		[item setRepresentedObject: searchMethod];
--		
-+
- 		// Is this the currently set search method? If yes, mark it as such.
- 		if ( [friendlyName isEqualToString:[[[Preferences standardPreferences] searchMethod] friendlyName]] )
- 			[item setState:NSOnState];
--		
-+
- 		[cellMenu addItem:item];
- 		[item release];
- 	}
--	
-+
- 	// Add all available plugged-in search methods to the menu.
- 	NSMutableArray * searchMethods = [NSMutableArray arrayWithArray:[pluginManager searchMethods]];
- 	if ([searchMethods count] > 0)
--	{	
-+	{
- 		[cellMenu addItem: [NSMenuItem separatorItem]];
--		
--		for (searchMethod in searchMethods)
-+
-+		NSEnumerator * enum_searchMethods = [searchMethods objectEnumerator];
-+		while ((searchMethod = [enum_searchMethods nextObject]))
- 		{
- 			if (![searchMethod friendlyName]) 
- 				continue;
-@@ -1218,7 +1223,7 @@
-  */
- -(void)openURLFromString:(NSString *)urlString inPreferredBrowser:(BOOL)openInPreferredBrowserFlag
- {
--	[self openURL:[NSURL URLWithString:urlString] inPreferredBrowser:openInPreferredBrowserFlag];
-+	[self openURL:[NSURL XP_URLWithString:urlString] inPreferredBrowser:openInPreferredBrowserFlag];
- }
- 
- /* openURL
-@@ -1272,7 +1277,9 @@
-  */
- -(IBAction)downloadEnclosure:(id)sender
- {
--	for (Article * currentArticle in [mainArticleView markedArticleRange])
-+	NSEnumerator * enum_currentArticle = [[mainArticleView markedArticleRange] objectEnumerator];
-+	Article * currentArticle;
-+	while ((currentArticle = [enum_currentArticle nextObject]))
- 	{
- 		if ([currentArticle hasEnclosure])
- 		{
-@@ -1333,13 +1340,14 @@
- -(void)loadOpenTabs
- {
- 	NSArray * tabLinks = [[Preferences standardPreferences] arrayForKey:MAPref_TabList];
--	
--	for (NSString * tabLink in tabLinks)
-+
-+	NSEnumerator * enum_tabLink = [tabLinks objectEnumerator];
-+	NSString * tabLink;
-+	while ((tabLink = [enum_tabLink nextObject]))
- 	{
--		[self createNewTab:([tabLink length] ? [NSURL URLWithString:tabLink] : nil) inBackground:YES];
-+		[self createNewTab:([tabLink length] ? [NSURL XP_URLWithString:tabLink] : nil) inBackground:YES];
- 	}
- }
--
- /* openVienna
-  * Calls into showMainWindow but activates the app first.
-  */
-@@ -1596,7 +1604,9 @@
- 	NSMenu * sortSubmenu = [[[NSMenu alloc] initWithTitle:@"Sort By"] autorelease];
+@@ -569,23 +564,6 @@
+ 	// Add the app to the status bar if needed.
+ 	[self showAppInStatusBar];
  	
- 	// Add the fields which are sortable to the menu.
--	for (Field * field in [db arrayOfFields])
-+	NSEnumerator * enum_sortFields = [[db arrayOfFields] objectEnumerator];
-+	Field * field;
-+	while ((field = [enum_sortFields nextObject]))
- 	{
- 		// Filter out columns we don't sort on. Later we should have an attribute in the
- 		// field object itself based on which columns we can sort on.
-@@ -1641,11 +1651,12 @@
- -(void)initColumnsMenu
- {
- 	NSMenu * columnsSubMenu = [[[NSMenu alloc] initWithTitle:@"Columns"] autorelease];
--	
--	for (Field * field in [db arrayOfFields])
-+
-+	NSEnumerator * enum_field = [[db arrayOfFields] objectEnumerator];
-+	Field * field;
-+	while ((field = [enum_field nextObject]))
- 	{
--		// Filter out columns we don't view in the article list. Later we should have an attribute in the
--		// field object based on which columns are visible in the tableview.
-+		// Filter out columns we don't view in the article list. Later we should have an attribute in the		// field object based on which columns are visible in the tableview.
- 		if ([field tag] != MA_FieldID_Text && 
- 			[field tag] != MA_FieldID_GUID &&
- 			[field tag] != MA_FieldID_Comments &&
-@@ -1680,7 +1691,7 @@
- 	[scriptPathMappings removeAllObjects];
- 	
- 	// Add scripts within the app resource
--	NSString * path = [[[NSBundle mainBundle] sharedSupportPath] stringByAppendingPathComponent:@"Scripts"];
-+	NSString * path = [[[[NSBundle mainBundle] resourcePath] stringByDeletingLastPathComponent] stringByAppendingPathComponent:@"SharedSupport/Scripts"];
- 	loadMapFromPath(path, scriptPathMappings, NO, exts);
- 	
- 	// Add scripts that the user created and stored in the scripts folder
-@@ -1957,6 +1968,25 @@
- 	[preferenceController showWindow:self];
- }
- 
-+/* _showSyncPrefsDebug
-+ * TEMP: Deferred helper to create and show the SyncPreferences window.
-+ * Deferred via performSelector:afterDelay: so any exception is isolated
-+ * from applicationDidFinishLaunching: and will appear in the log.
-+ */
-+-(void)_showSyncPrefsDebug
-+{
-+	static SyncPreferences * _syncPrefsDebug = nil;
-+	if (!_syncPrefsDebug)
-+		_syncPrefsDebug = [[SyncPreferences alloc] init];
-+	if (_syncPrefsDebug)
-+	{
-+		[[_syncPrefsDebug window] center];
-+		[NSApp activateIgnoringOtherApps:YES];
-+		[[_syncPrefsDebug window] makeKeyAndOrderFront:nil];
-+		[[_syncPrefsDebug window] orderFrontRegardless];
-+	}
-+}
-+
- /* printDocument
-  * Print the selected articles in the article window.
-  */
-@@ -2378,7 +2408,7 @@
- {
- 	NSString * stylesPage = [standardURLs valueForKey:@"ViennaMoreStylesPage"];
- 	if (stylesPage != nil)
--		[self openURLInDefaultBrowser:[NSURL URLWithString:stylesPage]];
-+		[self openURLInDefaultBrowser:[NSURL XP_URLWithString:stylesPage]];
- }
- 
- /* moreScripts
-@@ -2388,7 +2418,7 @@
- {
- 	NSString * scriptsPage = [standardURLs valueForKey:@"ViennaMoreScriptsPage"];
- 	if (scriptsPage != nil)
--		[self openURLInDefaultBrowser:[NSURL URLWithString:scriptsPage]];
-+		[self openURLInDefaultBrowser:[NSURL XP_URLWithString:scriptsPage]];
- }
- 
- /* viewArticlePages inPreferredBrowser
-@@ -2409,12 +2439,13 @@
-         NSMutableArray * articlesWithLinks = [NSMutableArray arrayWithCapacity:[articleArray count]];
-         NSMutableArray * urls = [NSMutableArray arrayWithCapacity:[articleArray count]];
- 		
--		for (currentArticle in articleArray)
-+		NSEnumerator * enum_articles = [articleArray objectEnumerator];
-+		while ((currentArticle = [enum_articles nextObject]))
- 		{
- 			if (currentArticle && ![[currentArticle link] isBlank])
-             {
-                 [articlesWithLinks addObject:currentArticle];
--				[urls addObject:[NSURL URLWithString:[currentArticle link]]];
-+				[urls addObject:[NSURL XP_URLWithString:[currentArticle link]]];
-             }
- 		}
- 		
-@@ -2749,10 +2780,11 @@
-  */
- -(ToolbarItem *)toolbarItemWithIdentifier:(NSString *)theIdentifier
- {
--	for (ToolbarItem * theItem in [[mainWindow toolbar] visibleItems])
-+	NSEnumerator * enum_theItem = [[[mainWindow toolbar] visibleItems] objectEnumerator];
-+	ToolbarItem * theItem;
-+	while ((theItem = [enum_theItem nextObject]))
- 	{
--		if ([[theItem itemIdentifier] isEqualToString:theIdentifier])
--			return theItem;
-+		if ([[theItem itemIdentifier] isEqualToString:theIdentifier])			return theItem;
- 	}
- 	return nil;
- }
-@@ -2817,6 +2849,25 @@
- 	}
- }
- 
-+/* createNewGoogleReaderSubscription
-+ * Create a new Open Reader subscription. The folder is tagged as a GoogleReader
-+ * folder type so the refresh manager knows to use the GR sync engine.
-+ */
-+-(void)createNewGoogleReaderSubscription:(NSString *)url underFolder:(int)parentId withTitle:(NSString *)title afterChild:(int)predecessorId
-+{
-+	// Skip if already subscribed
-+	if ([db folderFromFeedURL:url] != nil)
-+		return;
-+
-+	NSString * feedName = (title && [title length] > 0) ? title : [Database untitledFeedFolderName];
-+	[db beginTransaction];
-+	int folderId = [db addGoogleReaderFolder:feedName underParent:parentId afterChild:predecessorId subscriptionURL:url];
-+	[db commitTransaction];
-+
-+	if (folderId != -1)
-+		[foldersTree selectFolder:folderId];
-+}
-+
- /* newSubscription
-  * Display the pane for a new RSS subscription.
-  */
-@@ -2920,9 +2971,10 @@
-  */
- -(IBAction)showXMLSource:(id)sender
- {
--	for (Folder * folder in [foldersTree selectedFolders])
+-	// Growl initialization
+-	NSBundle *mainBundle = [NSBundle mainBundle];
+-	NSString *path = [[mainBundle privateFrameworksPath] stringByAppendingPathComponent:@"Growl.framework"];
+-	LOG_NS(@"path: %@", path);
+-	NSBundle *growlFramework = [NSBundle bundleWithPath:path];
+-	if([growlFramework load])
 -	{
--		if ([folder isRSSFolder])
-+	NSEnumerator * enum_folder = [[foldersTree selectedFolders] objectEnumerator];
-+	Folder * folder;
-+	while ((folder = [enum_folder nextObject]))
-+	{		if ([folder isRSSFolder])
- 		{
- 			XMLSourceWindow * sourceWindow = [[XMLSourceWindow alloc] initWithFolder:folder];
- 			
-@@ -3293,7 +3345,7 @@
- {
- 	NSString * homePage = [standardURLs valueForKey:@"ViennaHomePage"];
- 	if (homePage != nil)
--		[self openURLInDefaultBrowser:[NSURL URLWithString:homePage]];
-+		[self openURLInDefaultBrowser:[NSURL XP_URLWithString:homePage]];
- }
- 
- /* showAcknowledgements
-@@ -3305,7 +3357,7 @@
- 	NSString * pathToAckFile = [thisBundle pathForResource:@"Acknowledgements" ofType:@"html"];
- 	if (pathToAckFile != nil)
- 	{
--		[self createNewTab:[NSURL fileURLWithPath:pathToAckFile isDirectory:NO] inBackground:NO];
-+		[self createNewTab:[NSURL XP_fileURLWithPath:pathToAckFile isDirectory:NO] inBackground:NO];
- 	}
- }
- 
-@@ -3423,7 +3475,9 @@
- 		// If the current view is a browser view and "Search all articles" is the current SearchMethod, switch to "Search current webpage"
- 		if ([[[prefs searchMethod] friendlyName] isEqualToString:[[SearchMethod searchAllArticlesMethod] friendlyName]])
- 		{
--			for (NSMenuItem * menuItem in [[[searchField cell] searchMenuTemplate] itemArray])
-+			NSEnumerator * enum_menuItems1 = [[[[searchField cell] searchMenuTemplate] itemArray] objectEnumerator];
-+			NSMenuItem * menuItem;
-+			while ((menuItem = [enum_menuItems1 nextObject]))
- 			{
- 				if ([[[menuItem representedObject] friendlyName] isEqualToString:[[SearchMethod searchCurrentWebPageMethod] friendlyName]])
- 				{
-@@ -3438,12 +3492,14 @@
- 		// If the current view is anything else "Search current webpage" is active, switch to "Search all articles".
- 		if ([[[prefs searchMethod] friendlyName] isEqualToString:[[SearchMethod searchCurrentWebPageMethod] friendlyName]])
- 		{
--			for (NSMenuItem * menuItem in [[[searchField cell] searchMenuTemplate] itemArray])
-+			NSEnumerator * enum_menuItems2 = [[[[searchField cell] searchMenuTemplate] itemArray] objectEnumerator];
-+			NSMenuItem * menuItem2;
-+			while ((menuItem2 = [enum_menuItems2 nextObject]))
- 			{
--				if ([[[menuItem representedObject] friendlyName] isEqualToString:[[SearchMethod searchAllArticlesMethod] friendlyName]])
-+				if ([[[menuItem2 representedObject] friendlyName] isEqualToString:[[SearchMethod searchAllArticlesMethod] friendlyName]])
- 				{
- 					[[searchField cell] setPlaceholderString:NSLocalizedString([[SearchMethod searchAllArticlesMethod] friendlyName], nil)];
--					[[Preferences standardPreferences] setSearchMethod: [menuItem representedObject]];
-+					[[Preferences standardPreferences] setSearchMethod: [menuItem2 representedObject]];
- 				}
- 			}
- 		}
-@@ -3677,10 +3733,10 @@
- 			else
- 			{
- 				mailtoLink = [NSMutableString stringWithFormat:@"mailto:?subject=&body="];
--				for (currentArticle in articleArray)
-+				NSEnumerator * enum_currentArticle = [articleArray objectEnumerator];
-+				while ((currentArticle = [enum_currentArticle nextObject]))
- 				{
--					title = percentEscape([currentArticle title]);
--					link = percentEscape([currentArticle link]);
-+					title = percentEscape([currentArticle title]);					link = percentEscape([currentArticle link]);
- 					[mailtoLink appendFormat: @"%@%@%@%@%@", title, mailtoLineBreak, link, mailtoLineBreak, mailtoLineBreak];
- 					CFRelease(title);
- 					CFRelease(link);
-@@ -3690,7 +3746,7 @@
- 	}
+-		NSDictionary *infoDictionary = [growlFramework infoDictionary];
+-		LOG_NS(@"Using Growl.framework %@ (%@)",
+-			  [infoDictionary objectForKey:@"CFBundleShortVersionString"],
+-			  [infoDictionary objectForKey:(NSString *)kCFBundleVersionKey]);
+-
+-		Class GAB = NSClassFromString(@"GrowlApplicationBridge");
+-		if([GAB respondsToSelector:@selector(setGrowlDelegate:)])
+-			[GAB performSelector:@selector(setGrowlDelegate:) withObject:self];
+-	}
+-	
+ 	// Start the check timer
+ 	[self handleCheckFrequencyChange:nil];
  	
- 	if (mailtoLink != nil)
--		[self openURLInDefaultBrowser:[NSURL URLWithString: mailtoLink]];
-+		[self openURLInDefaultBrowser:[NSURL XP_URLWithString: mailtoLink]];
+@@ -721,7 +699,7 @@
+ 		[activityWindow performClose:self];
+ 		
+ 		// Put back the original app icon
+-		[[NSApp dockTile] setBadgeLabel:nil];
++		[NSApp XP_setBadgeLabel:nil];
+ 		
+ 		// Save the open tabs
+ 		[browserView saveOpenTabs];
+@@ -1718,16 +1696,7 @@
+  */
+ -(void)growlNotify:(id)notifyContext title:(NSString *)title description:(NSString *)description notificationName:(NSString *)notificationName
+ {
+-	Class GAB = NSClassFromString(@"GrowlApplicationBridge");
+-	if([GAB respondsToSelector:@selector(notifyWithTitle:description:notificationName:iconData:priority:isSticky:clickContext:identifier:)])
+-					[GAB setShouldUseBuiltInNotifications:NO];
+-					[GAB		notifyWithTitle:title
+-									description:description
+-							   notificationName:notificationName
+-									   iconData:nil
+-									   priority:0
+-									   isSticky:NO
+-								   clickContext:notifyContext];
++  NSLog(@"Growl Notification: %@ %@", title, description);
  }
  
- /* makeTextSmaller
-@@ -3747,10 +3803,11 @@
+ /* growlNotificationWasClicked
+@@ -2017,7 +1986,7 @@
+ 		& MA_NewArticlesNotification_Badge) == 0)
+ 	{
+ 		// Remove the badge if there was one.
+-		[[NSApp dockTile] setBadgeLabel:nil];
++		[NSApp XP_setBadgeLabel:nil];
+ 	}
  	else
  	{
- 		// Get the currently selected articles from the ArticleView and iterate over them.
--		for (Article * currentArticle in [mainArticleView markedArticleRange])
-+		NSEnumerator * enum_currentArticle = [[mainArticleView markedArticleRange] objectEnumerator];
-+		Article * currentArticle;
-+		while ((currentArticle = [enum_currentArticle nextObject]))
- 			[self sendBlogEvent:externalEditorBundleIdentifier title:[currentArticle title] url:[currentArticle link] body:[NSApp currentTextSelection] author:[currentArticle author] guid:[currentArticle guid]];
--	}
--}
-+	}}
+@@ -2031,32 +2000,32 @@
+  */
+ -(void)showUnreadCountOnApplicationIconAndWindowTitle
+ {
+-	@synchronized([NSApp dockTile]) {
++	@synchronized(self) {
+ 	int currentCountOfUnread = [db countOfUnread];
+ 	if (currentCountOfUnread == lastCountOfUnread)
+ 		return;
+ 	lastCountOfUnread = currentCountOfUnread;
+-	
++
+ 	// Always update the app status icon first
+ 	[self setAppStatusBarIcon];
+-	
++
+ 	// Don't show a count if there are no unread articles
+ 	if (currentCountOfUnread <= 0)
+ 	{
+-		[[NSApp dockTile] setBadgeLabel:nil];
++		[NSApp XP_setBadgeLabel:nil];
+ 		[mainWindow setTitle:[self appName]];
+-		return;	
+-	}	
+-	
++		return;
++	}
++
+ 	[mainWindow setTitle:[NSString stringWithFormat:@"%@ (%i %@)", [self appName], currentCountOfUnread, NSLocalizedString(@"Unread", nil)]];
+-	
++
+ 	// Exit now if we're not showing the unread count on the application icon
+ 	if (([[Preferences standardPreferences] newArticlesNotification]
+ 		& MA_NewArticlesNotification_Badge) ==0)
+ 			return;
+-	
++
+ 	NSString * countdown = [NSString stringWithFormat:@"%i", currentCountOfUnread];
+-	[[NSApp dockTile] setBadgeLabel:countdown];
++	[NSApp XP_setBadgeLabel:countdown];
  
- /* sendBlogEvent
-  * Send an event to the specified blog editor using the given parameters. Unused parameters should be set to an empty string.
-@@ -4555,4 +4612,4 @@
- 	[searchString release];
- 	[super dealloc];
+ 	} // @synchronized
  }
--@end
-\ No newline at end of file
-+@end
+@@ -2897,10 +2866,10 @@
+ 	}
+ 	
+ 	// Create then select the new folder.
+-	__block NSInteger folderId;
+-	[db doTransactionWithBlock:^(BOOL *rollback) {
+-		folderId = [db addGoogleReaderFolder:title underParent:parentId afterChild:predecessorId subscriptionURL:url];
+-	}]; //end transaction block
++	NSInteger folderId;
++	[db beginTransaction];
++	folderId = [db addGoogleReaderFolder:title underParent:parentId afterChild:predecessorId subscriptionURL:url];
++	[db commitTransaction];
+ 	
+ 	
+ 	if (folderId != -1)
+@@ -2947,10 +2916,10 @@
+ 	}
+ 	else
+ 	{ //creates locally
+-		__block NSInteger folderId;
+-		[db doTransactionWithBlock:^(BOOL *rollback) {
+-			folderId = [db addRSSFolder:[Database untitledFeedFolderName] underParent:parentId afterChild:predecessorId subscriptionURL:urlString];
+-		}]; //end transaction block
++		NSInteger folderId;
++		[db beginTransaction];
++		folderId = [db addRSSFolder:[Database untitledFeedFolderName] underParent:parentId afterChild:predecessorId subscriptionURL:urlString];
++		[db commitTransaction];
+ 
+ 		if (folderId != -1)
+ 		{

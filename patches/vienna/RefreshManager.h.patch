@@ -1,0 +1,21 @@
+--- vienna/RefreshManager.h
++++ vienna/RefreshManager.h
+@@ -34,7 +34,6 @@
+ 	NSString * statusMessageDuringRefresh;
+     SyncTypes syncType;
+ 	ASINetworkQueue *networkQueue;
+-	dispatch_queue_t _queue;
+ 	NSTimer * unsafe301RedirectionTimer;
+ 	NSString * riskyIPAddress;
+ }
+@@ -55,7 +54,9 @@
+ -(NSString *)statusMessageDuringRefresh;
+ -(void)refreshFavIcon:(Folder *)folder;
+ -(void)addConnection:(ASIHTTPRequest *)conn;
+--(dispatch_queue_t)asyncQueue;
++-(void)folderRefreshCompleted:(ASIHTTPRequest *)connector;
++-(BOOL)canTrust301Redirects:(ASIHTTPRequest *)connector;
++-(void)finalizeFolderRefresh:(NSDictionary*)parameters;
+ @end
+ 
+ // Refresh types

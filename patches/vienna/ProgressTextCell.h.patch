@@ -1,9 +1,0 @@
---- vienna/ProgressTextCell.h	2026-04-07 13:09:04.220860848 +0000
-+++ vienna/ProgressTextCell.h	2026-04-07 13:11:22.128792461 +0000
-@@ -36,4 +36,4 @@
- 
- // Accessor functions
- -(void)setInProgress:(BOOL)newInProgress forRow:(NSInteger)row;
--@end
-\ No newline at end of file
-+@end

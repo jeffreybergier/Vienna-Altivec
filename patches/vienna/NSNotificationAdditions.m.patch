@@ -1,0 +1,29 @@
+--- vienna/NSNotificationAdditions.m
++++ vienna/NSNotificationAdditions.m
+@@ -2,21 +2,17 @@
+ 
+ @implementation NSNotificationCenter (NSNotificationCenterAdditions)
+ - (void) postNotificationOnMainThread:(NSNotification *) notification {
+-	dispatch_async(dispatch_get_main_queue(), ^{
+-		[self postNotification:notification];
+-	});
++  [self performSelectorOnMainThread:@selector(postNotification:) withObject:notification waitUntilDone:NO];
+ }
+ 
+ - (void) postNotificationOnMainThreadWithName:(NSString *) name object:(id) object {
+-	dispatch_async(dispatch_get_main_queue(), ^{
+-		[self postNotificationName:name object:object];
+-	});
++  NSNotification *n = [NSNotification notificationWithName:name object:object];
++  [self performSelectorOnMainThread:@selector(postNotification:) withObject:n waitUntilDone:NO];
+ }
+ 
+ - (void) postNotificationOnMainThreadWithName:(NSString *) name object:(id) object userInfo:(NSDictionary *) userInfo {
+-	dispatch_async(dispatch_get_main_queue(), ^{
+-		[self postNotificationName:name object:object userInfo:userInfo];
+-	});
++  NSNotification *n = [NSNotification notificationWithName:name object:object userInfo:userInfo];
++  [self performSelectorOnMainThread:@selector(postNotification:) withObject:n waitUntilDone:NO];
+ }
+ 
+ @end

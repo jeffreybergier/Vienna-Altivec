@@ -1,0 +1,20 @@
+--- vienna/Preferences/AppearancePreferencesViewController.m
++++ vienna/Preferences/AppearancePreferencesViewController.m
+@@ -43,15 +43,13 @@
+ @implementation AppearancePreferencesViewController
+ 
+ 
+-- (instancetype)init {
++- (id)init {
+     return [super initWithNibName:@"AppearancePreferencesView" bundle:nil];
+ }
+ 
+ 
+ - (void)viewWillAppear {
+-    if([NSViewController instancesRespondToSelector:@selector(viewWillAppear)]) {
+-        [super viewWillAppear];
+-    }
++    [super viewWillAppear];
+     // Do view setup here.
+     [self initializePreferences];
+     

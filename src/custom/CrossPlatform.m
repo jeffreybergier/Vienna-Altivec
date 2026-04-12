@@ -1,5 +1,38 @@
 #import "Vienna_Prefix.pch"
 #import "CrossPlatform.h"
+#import <objc/objc-runtime.h>
+
+// ---- ObjC2 runtime polyfills for Tiger (10.4) ----
+// _objc_setProperty is called by @synthesize-generated setters for retain/copy props
+
+void _objc_setProperty(id self, SEL _cmd, ptrdiff_t offset, id newValue, BOOL atomic, signed char shouldCopy) {
+  (void)_cmd; (void)atomic;
+  id *slot = (id *)((char *)self + offset);
+  id oldValue = *slot;
+  id toStore;
+  if (shouldCopy == 1) {
+    toStore = [newValue copy];
+  } else if (shouldCopy == 2) {
+    toStore = [newValue mutableCopy];
+  } else {
+    toStore = [newValue retain];
+  }
+  *slot = toStore;
+  [oldValue release];
+}
+
+// Getter variant (for atomic retain properties — returns retained-then-autoreleased)
+id _objc_getProperty(id self, SEL _cmd, ptrdiff_t offset, BOOL atomic) {
+  (void)_cmd; (void)atomic;
+  id *slot = (id *)((char *)self + offset);
+  return [[*slot retain] autorelease];
+}
+
+// Called when a collection is mutated during fast enumeration
+void _objc_enumerationMutation(id object) {
+  (void)object;
+  [[NSException exceptionWithName:NSGenericException reason:@"Collection mutated during enumeration" userInfo:nil] raise];
+}
 
 /* createRecursiveDirectory
  * Recursively creates a directory path. Added for Tiger compatibility.
@@ -14,6 +47,89 @@ BOOL createRecursiveDirectory(NSString * path)
 	return [fileManager createDirectoryAtPath:path attributes:nil];
 }
 
+// ---- Fast enumeration polyfill for Tiger ----
+
+@implementation NSArray (XP_FastEnumeration)
+- (NSUInteger)countByEnumeratingWithState:(NSFastEnumerationState *)state objects:(id *)stackbuf count:(NSUInteger)len {
+  NSUInteger idx = state->state;
+  NSUInteger selfCount = [self count];
+  if (idx == 0)
+    state->mutationsPtr = &state->extra[0];
+  NSUInteger cnt = 0;
+  while (idx < selfCount && cnt < len) {
+    stackbuf[cnt++] = [self objectAtIndex:idx++];
+  }
+  state->state = idx;
+  state->itemsPtr = stackbuf;
+  return cnt;
+}
+@end
+
+@implementation NSSet (XP_FastEnumeration)
+- (NSUInteger)countByEnumeratingWithState:(NSFastEnumerationState *)state objects:(id *)stackbuf count:(NSUInteger)len {
+  NSArray * arr = (state->state == 0) ? [self allObjects] : nil;
+  if (arr) {
+    state->extra[0] = (unsigned long)arr;
+    [arr retain];
+    state->mutationsPtr = &state->extra[1];
+  } else {
+    arr = (NSArray *)(void *)state->extra[0];
+  }
+  NSUInteger idx = state->state & 0xFFFF;
+  NSUInteger total = [arr count];
+  NSUInteger cnt = 0;
+  while (idx < total && cnt < len) {
+    stackbuf[cnt++] = [arr objectAtIndex:idx++];
+  }
+  state->state = (state->state & ~0xFFFF) | idx;
+  state->itemsPtr = stackbuf;
+  if (cnt == 0 && arr) {
+    [(NSArray *)(void *)state->extra[0] release];
+  }
+  return cnt;
+}
+@end
+
+@implementation NSDictionary (XP_FastEnumeration)
+- (NSUInteger)countByEnumeratingWithState:(NSFastEnumerationState *)state objects:(id *)stackbuf count:(NSUInteger)len {
+  NSArray * keys = (state->state == 0) ? [self allKeys] : nil;
+  if (keys) {
+    state->extra[0] = (unsigned long)keys;
+    [keys retain];
+    state->mutationsPtr = &state->extra[1];
+  } else {
+    keys = (NSArray *)(void *)state->extra[0];
+  }
+  NSUInteger idx = state->state & 0xFFFF;
+  NSUInteger total = [keys count];
+  NSUInteger cnt = 0;
+  while (idx < total && cnt < len) {
+    stackbuf[cnt++] = [keys objectAtIndex:idx++];
+  }
+  state->state = (state->state & ~0xFFFF) | idx;
+  state->itemsPtr = stackbuf;
+  if (cnt == 0 && keys) {
+    [(NSArray *)(void *)state->extra[0] release];
+  }
+  return cnt;
+}
+@end
+
+@implementation NSEnumerator (XP_FastEnumeration)
+- (NSUInteger)countByEnumeratingWithState:(NSFastEnumerationState *)state objects:(id *)stackbuf count:(NSUInteger)len {
+  if (state->state == 0)
+    state->mutationsPtr = &state->extra[0];
+  NSUInteger cnt = 0;
+  id obj;
+  while (cnt < len && (obj = [self nextObject]) != nil) {
+    stackbuf[cnt++] = obj;
+  }
+  state->state = 1;
+  state->itemsPtr = stackbuf;
+  return cnt;
+}
+@end
+
 @implementation NSCell (XP_Compatibility)
 -(void)XP_setBackgroundStyle:(NSInteger)style;
 {
@@ -24,6 +140,29 @@ BOOL createRecursiveDirectory(NSString * path)
 		MethodPtr m = (MethodPtr)[self methodForSelector:sel];
 		m(self, sel, style);
 	}
+}
+@end
+
+@implementation NSWindow (XP_Compatibility)
+-(void)XP_setCollectionBehavior:(NSUInteger)behavior {
+	SEL sel = @selector(setCollectionBehavior:);
+	if ([self respondsToSelector:sel]) {
+		typedef void (*MethodPtr)(id, SEL, NSUInteger);
+		MethodPtr m = (MethodPtr)[self methodForSelector:sel];
+		m(self, sel, behavior);
+	}
+}
+@end
+
+@implementation NSApplication (XP_Compatibility)
+-(void)XP_setBadgeLabel:(NSString *)label {
+	SEL tilesel = @selector(dockTile);
+	if (![self respondsToSelector:tilesel]) return;
+	typedef id (*TilePtr)(id, SEL);
+	id tile = ((TilePtr)[self methodForSelector:tilesel])(self, tilesel);
+	SEL badgesel = @selector(setBadgeLabel:);
+	typedef void (*BadgePtr)(id, SEL, NSString*);
+	((BadgePtr)[tile methodForSelector:badgesel])(tile, badgesel, label);
 }
 @end
 
@@ -67,6 +206,15 @@ BOOL createRecursiveDirectory(NSString * path)
 	if (url == nil) return nil;
 	return [NSURL URLWithString:url relativeToURL:baseURL];
 }
+-(NSString *)XP_pathExtension;
+{
+	SEL sel = @selector(pathExtension);
+	if ([self respondsToSelector:sel]) {
+		return [self performSelector:sel];
+	} else {
+		return [[self path] pathExtension]; 
+	}
+}
 @end
 
 @implementation NSString (XP_Compatibility)
@@ -91,16 +239,94 @@ BOOL createRecursiveDirectory(NSString * path)
 }
 @end
 
+@implementation NSImage (XP_Compatibility)
+-(void)XP_drawInRect:(NSRect)dstRect fromRect:(NSRect)srcRect operation:(NSCompositingOperation)op fraction:(CGFloat)delta respectFlipped:(BOOL)flipped hints:(NSDictionary *)hints;
+{
+	SEL sel = @selector(drawInRect:fromRect:operation:fraction:respectFlipped:hints:);
+	if ([self respondsToSelector:sel]) {
+		typedef void (*DrawPtr)(id, SEL, NSRect, NSRect, NSCompositingOperation, CGFloat, BOOL, NSDictionary *);
+		((DrawPtr)[self methodForSelector:sel])(self, sel, dstRect, srcRect, op, delta, flipped, hints);
+	} else {
+		[self drawInRect:dstRect fromRect:srcRect operation:op fraction:delta];
+	}
+}
+@end
+
+@implementation NSDate (XP_Compatibility)
+-(NSDate *)XP_dateByAddingTimeInterval:(NSTimeInterval)ti;
+{
+	SEL sel = @selector(dateByAddingTimeInterval:);
+	if ([self respondsToSelector:sel]) {
+		typedef id (*DatePtr)(id, SEL, NSTimeInterval);
+		return ((DatePtr)[self methodForSelector:sel])(self, sel, ti);
+	}
+	return [self addTimeInterval:ti];
+}
+@end
+
+@implementation NSDateFormatter (XP_Compatibility)
++(NSString *)XP_localizedStringFromDate:(NSDate *)date dateStyle:(NSDateFormatterStyle)dateStyle timeStyle:(NSDateFormatterStyle)timeStyle;
+{
+	SEL sel = @selector(localizedStringFromDate:dateStyle:timeStyle:);
+	if ([self respondsToSelector:sel]) {
+		typedef id (*FmtPtr)(id, SEL, NSDate *, NSDateFormatterStyle, NSDateFormatterStyle);
+		return ((FmtPtr)[self methodForSelector:sel])(self, sel, date, dateStyle, timeStyle);
+	}
+	NSDateFormatter *fmt = [[[NSDateFormatter alloc] init] autorelease];
+	[fmt setDateStyle:dateStyle];
+	[fmt setTimeStyle:timeStyle];
+	return [fmt stringFromDate:date];
+}
+@end
+
+@implementation NSViewController (XP_Compatibility)
+-(void)viewWillAppear;
+{
+}
+@end
+
+@implementation NSObject (XP_WebOpenPanel)
+-(void)XP_chooseFilenames:(NSArray *)filenames {
+  SEL plural = @selector(chooseFilenames:);
+  if ([self respondsToSelector:plural]) {
+    [self performSelector:plural withObject:filenames];
+  } else {
+    NSString *first = [filenames count] > 0 ? [filenames objectAtIndex:0] : nil;
+    if (first) {
+      [self performSelector:@selector(chooseFilename:) withObject:first];
+    }
+  }
+}
+@end
+
+@implementation NSRunningApplication
++ (NSArray *)runningApplicationsWithBundleIdentifier:(NSString *)bundleIdentifier;
+{
+  // 10.6+ only — return empty on Tiger to allow caller to launch the app
+  (void)bundleIdentifier;
+  return [NSArray array];
+}
+@end
+
 @implementation NSNumber (XP_Compatibility)
 +(NSNumber *)XP_numberWithInteger:(NSInteger)value;
 {
-	SEL sel = @selector(numberWithInteger:);
-	if ([NSNumber respondsToSelector:sel])
-	{
-		typedef NSNumber * (*MethodPtr)(id, SEL, NSInteger);
-		MethodPtr m = (MethodPtr)[NSNumber methodForSelector:sel];
-		return m([NSNumber class], sel, value);
-	}
 	return [NSNumber numberWithInt:(int)value];
+}
++(NSNumber *)numberWithInteger:(NSInteger)value;
+{
+	return [NSNumber numberWithInt:(int)value];
+}
++(NSNumber *)numberWithUnsignedInteger:(NSUInteger)value;
+{
+	return [NSNumber numberWithUnsignedInt:(unsigned int)value];
+}
+-(NSInteger)integerValue;
+{
+	return (NSInteger)[self intValue];
+}
+-(NSUInteger)unsignedIntegerValue;
+{
+	return (NSUInteger)[self unsignedIntValue];
 }
 @end

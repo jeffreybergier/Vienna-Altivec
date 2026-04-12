@@ -1,0 +1,20 @@
+--- vienna/Preferences/SyncingPreferencesViewController.m
++++ vienna/Preferences/SyncingPreferencesViewController.m
+@@ -25,6 +25,8 @@
+ #import "SyncingPreferencesViewController.h"
+ 
+ @interface SyncingPreferencesViewController ()
++-(void)handleServerTextDidChange:(NSNotification *)aNotification;
++-(void)handleGoogleAuthFailed:(NSNotification *)nc;
+ 
+ @end
+ 
+@@ -34,7 +36,7 @@
+ @synthesize syncButton;
+ 
+ 
+-- (instancetype)init {
++- (id)init {
+     return [super initWithNibName:@"SyncingPreferencesView" bundle:nil];
+ }
+ 

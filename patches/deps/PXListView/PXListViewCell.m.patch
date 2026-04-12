@@ -1,0 +1,17 @@
+--- PXListViewCell.m
++++ PXListViewCell.m
+@@ -19,7 +19,13 @@
+ 
+ @implementation PXListViewCell
+ 
+-@synthesize reusableIdentifier = _reusableIdentifier;
++// @synthesize reusableIdentifier — manual impl; @synthesize of copy property calls _objc_setProperty (unavailable on Tiger)
++- (NSString *)reusableIdentifier { return _reusableIdentifier; }
++- (void)setReusableIdentifier:(NSString *)reusableIdentifier_ {
++	NSString *old = _reusableIdentifier;
++	_reusableIdentifier = [reusableIdentifier_ copy];
++	[old release];
++}
+ @synthesize listView = _listView;
+ @synthesize row = _row;
+ 

@@ -1,9 +1,0 @@
---- vienna/ImageAndTextCell.h	2026-04-07 10:53:55.846200052 +0000
-+++ vienna/ImageAndTextCell.h	2026-04-07 11:10:03.220514686 +0000
-@@ -48,4 +48,4 @@
- -(void)drawCellImage:(NSRect *)cellFrame inView:(NSView *)controlView;
- - (void)setInProgress:(BOOL)newInProgress;
- - (void)setItem:(TreeNode *)newItem;
--@end
-\ No newline at end of file
-+@end

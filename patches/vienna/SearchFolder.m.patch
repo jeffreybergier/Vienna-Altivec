@@ -1,43 +1,29 @@
---- vienna/SearchFolder.m	2026-04-05 14:13:19.592889923 +0000
-+++ vienna/SearchFolder.m	2026-04-06 21:48:19.497062409 +0000
-@@ -21,7 +21,6 @@
- #import "SearchFolder.h"
- #import "StringExtensions.h"
- #import "AppController.h"
--#import "HelperFunctions.h"
- #import "PopUpButtonExtensions.h"
- 
- // Tags for the three fields that define a criteria. We set these here
-@@ -104,7 +103,9 @@
- 		// Set the criteria condition
- 		[criteriaConditionPopup selectItemWithTag:[criteriaTree condition]];
- 
--		for (Criteria * criteria in [criteriaTree criteriaEnumerator])
-+		NSEnumerator * enum_criteria = [criteriaTree criteriaEnumerator];
-+		Criteria * criteria;
-+		while ((criteria = [enum_criteria nextObject]))
- 		{
- 			[self initForField:[criteria field] inRow:searchCriteriaView];
- 
-@@ -175,7 +176,9 @@
- 		// fields in the database.
- 
- 		[fieldNamePopup removeAllItems];
--		for (Field * field in [db arrayOfFields])
-+		NSEnumerator * enum_field = [[db arrayOfFields] objectEnumerator];
-+		Field * field;
-+		while ((field = [enum_field nextObject]))
- 		{
- 			if ([field tag] != MA_FieldID_Headlines &&
- 				[field tag] != MA_FieldID_GUID &&
-@@ -240,7 +243,9 @@
-  */
- -(void)initFolderValueField:(int)fromId atIndent:(int)indentation
- {
--	for (Folder * folder in [db arrayOfFolders:fromId])
-+	NSEnumerator * enum_folder = [[db arrayOfFolders:fromId] objectEnumerator];
-+	Folder * folder;
-+	while ((folder = [enum_folder nextObject]))
+--- vienna/SearchFolder.m
++++ vienna/SearchFolder.m
+@@ -470,18 +470,18 @@
+ 	// Set the criteria condition
+ 	[criteriaTree setCondition:[criteriaConditionPopup selectedTag]];
+ 	
+-	[db doTransactionWithBlock:^(BOOL *rollback) {
++	[db beginTransaction];
+ 	if (smartFolderId == -1)
  	{
- 		if (IsRSSFolder(folder) || IsGroupFolder(folder))
- 		{
+-		AppController * controller = APPCONTROLLER;
+-		smartFolderId = [db addSmartFolder:folderName underParent:parentId withQuery:criteriaTree];
+-		[controller selectFolder:smartFolderId];
++	AppController * controller = APPCONTROLLER;
++	smartFolderId = [db addSmartFolder:folderName underParent:parentId withQuery:criteriaTree];
++	[controller selectFolder:smartFolderId];
+ 	}
+ 	else
+-    {
+-		[db updateSearchFolder:smartFolderId withFolder:folderName withQuery:criteriaTree];
+-    }
+-    }]; //end transaction block
++{
++	[db updateSearchFolder:smartFolderId withFolder:folderName withQuery:criteriaTree];
++}
++	[db commitTransaction];
+ 
+ 	[criteriaTree release];
+ 	

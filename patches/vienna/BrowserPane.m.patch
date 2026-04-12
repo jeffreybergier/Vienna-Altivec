@@ -1,51 +1,41 @@
---- vienna/BrowserPane.m	2026-04-07 13:09:04.208723118 +0000
-+++ vienna/BrowserPane.m	2026-04-07 13:11:22.472960332 +0000
-@@ -24,7 +24,6 @@
- #import "Constants.h"
- #import "AppController.h"
- #import "Preferences.h"
--#import "HelperFunctions.h"
- #import "StringExtensions.h"
- #import "AddressBarCell.h"
- #import <WebKit/WebKit.h>
-@@ -330,12 +329,11 @@
- 			NSString * pathToErrorPage = [[NSBundle bundleForClass:[self class]] pathForResource:@"errorpage" ofType:@"html"];
- 			if (pathToErrorPage != nil)
- 			{
--				NSString *errorMessage = [NSString stringWithContentsOfFile:pathToErrorPage encoding:NSUTF8StringEncoding error:NULL];
--				errorMessage = [errorMessage stringByReplacingOccurrencesOfString: @"$ErrorInformation" withString: [error localizedDescription]];
-+				NSString *errorMessage = [NSString stringWithContentsOfFile:pathToErrorPage];
-+				errorMessage = [errorMessage XP_stringByReplacingOccurrencesOfString: @"$ErrorInformation" withString: [error localizedDescription]];
- 				if (errorMessage != nil)
- 				{
--					[frame loadAlternateHTMLString:errorMessage baseURL:[NSURL fileURLWithPath:pathToErrorPage isDirectory:NO] forUnreachableURL:[[[frame provisionalDataSource] request] URL]];
--				}
-+					[frame loadAlternateHTMLString:errorMessage baseURL:[NSURL XP_fileURLWithPath:pathToErrorPage isDirectory:NO] forUnreachableURL:[[[frame provisionalDataSource] request] URL]];				}
- 				NSString *unreachableURL = [[[frame provisionalDataSource] unreachableURL] absoluteString];
- 				if (unreachableURL != nil)
- 					[addressField setStringValue: [[[frame provisionalDataSource] unreachableURL] absoluteString]];
-@@ -385,12 +383,11 @@
- 			NSString * pathToErrorPage = [[NSBundle bundleForClass:[self class]] pathForResource:@"errorpage" ofType:@"html"];
- 			if (pathToErrorPage != nil)
- 			{
--				NSString *errorMessage = [NSString stringWithContentsOfFile:pathToErrorPage encoding:NSUTF8StringEncoding error:NULL];
--				errorMessage = [errorMessage stringByReplacingOccurrencesOfString: @"$ErrorInformation" withString: [error localizedDescription]];
-+				NSString *errorMessage = [NSString stringWithContentsOfFile:pathToErrorPage];
-+				errorMessage = [errorMessage XP_stringByReplacingOccurrencesOfString: @"$ErrorInformation" withString: [error localizedDescription]];
- 				if (errorMessage != nil)
- 				{
--					[frame loadAlternateHTMLString:errorMessage baseURL:[NSURL fileURLWithPath:pathToErrorPage isDirectory:NO] forUnreachableURL:[[[frame dataSource] request] URL]];
--				}
-+					[frame loadAlternateHTMLString:errorMessage baseURL:[NSURL XP_fileURLWithPath:pathToErrorPage isDirectory:NO] forUnreachableURL:[[[frame dataSource] request] URL]];				}
- 			}		
- 		}
- 		[self endFrameLoad];
-@@ -552,7 +549,7 @@
- 	{
- 		NSString * urlString = [addressField stringValue];
- 		if (urlString != nil)
--			theURL = [NSURL URLWithString:urlString];
-+			theURL = [NSURL XP_URLWithString:urlString];
- 	}
- 	return theURL;
+--- vienna/BrowserPane.m
++++ vienna/BrowserPane.m
+@@ -67,17 +67,26 @@
+ @end
+ 
+ @implementation BrowserPane
+-@synthesize webPane;
++// @synthesize webPane = webPane; — replaced with manual impl for Tiger compatibility
++- (IBOutlet TabbedWebView *)webPane {
++	return [[webPane retain] autorelease];
++}
++- (void)setWebPane:(IBOutlet TabbedWebView *)webPane_ {
++	id old = webPane;
++	webPane = [webPane_ retain];
++	[old release];
++}
++
+ 
+ + (void)load
+ {
+-    @autoreleasepool {
++    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+         if (self == [BrowserPane class]) {
+             //These are synonyms
+             [self exposeBinding:@"isLoading"];
+             [self exposeBinding:@"isProcessing"];
+         }
+-    }
++    [pool drain];
  }
+ 
+ + (NSSet *)keyPathsForValuesAffectingValueForKey:(NSString *)key
+@@ -536,7 +545,7 @@
+ 	if ( [openDlg runModal] == NSOKButton )
+ 	{
+ 		NSArray* files = [[openDlg URLs]valueForKey:@"relativePath"];
+-		[resultListener chooseFilenames:files];
++		[(id)resultListener XP_chooseFilenames:files];
+ 	}
+ }
+ 

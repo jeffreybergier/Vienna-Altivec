@@ -1,0 +1,259 @@
+--- vienna/GoogleReader.m
++++ vienna/GoogleReader.m
+@@ -61,19 +61,67 @@
+ 
+ @interface GoogleReader()
+ @property (nonatomic, copy) NSMutableArray * localFeeds;
+-@property (atomic, copy) NSString *token;
+-@property (atomic, copy) NSString *clientAuthToken;
++@property (copy) NSString *token;
++@property (copy) NSString *clientAuthToken;
+ @property (nonatomic, retain) NSTimer * tokenTimer;
+ @property (nonatomic, retain) NSTimer * authTimer;
++-(void)commonRequestPrepare:(ASIHTTPRequest *)request;
++-(void)createFolders:(NSMutableArray *)params;
++-(void)createNewSubscription:(NSArray *)params;
+ @end
+ 
+ @implementation GoogleReader
+ 
+-@synthesize localFeeds;
+-@synthesize token;
+-@synthesize clientAuthToken;
+-@synthesize tokenTimer;
+-@synthesize authTimer;
++// @synthesize localFeeds = localFeeds; — replaced with manual impl for Tiger compatibility
++- (NSMutableArray *)localFeeds {
++	return [[localFeeds retain] autorelease];
++}
++- (void)setLocalFeeds:(NSMutableArray *)localFeeds_ {
++	id old = localFeeds;
++	localFeeds = [localFeeds_ copy];
++	[old release];
++}
++
++// @synthesize token = token; — replaced with manual impl for Tiger compatibility
++- (NSString *)token {
++	return [[token retain] autorelease];
++}
++- (void)setToken:(NSString *)token_ {
++	id old = token;
++	token = [token_ copy];
++	[old release];
++}
++
++// @synthesize clientAuthToken = clientAuthToken; — replaced with manual impl for Tiger compatibility
++- (NSString *)clientAuthToken {
++	return [[clientAuthToken retain] autorelease];
++}
++- (void)setClientAuthToken:(NSString *)clientAuthToken_ {
++	id old = clientAuthToken;
++	clientAuthToken = [clientAuthToken_ copy];
++	[old release];
++}
++
++// @synthesize tokenTimer = tokenTimer; — replaced with manual impl for Tiger compatibility
++- (NSTimer *)tokenTimer {
++	return [[tokenTimer retain] autorelease];
++}
++- (void)setTokenTimer:(NSTimer *)tokenTimer_ {
++	id old = tokenTimer;
++	tokenTimer = [tokenTimer_ retain];
++	[old release];
++}
++
++// @synthesize authTimer = authTimer; — replaced with manual impl for Tiger compatibility
++- (NSTimer *)authTimer {
++	return [[authTimer retain] autorelease];
++}
++- (void)setAuthTimer:(NSTimer *)authTimer_ {
++	id old = authTimer;
++	authTimer = [authTimer_ retain];
++	[old release];
++}
++
+ 
+ JSONDecoder * jsonDecoder;
+ 
+@@ -235,9 +283,6 @@
+ // callback
+ - (void)feedRequestDone:(ASIHTTPRequest *)request
+ {
+-	dispatch_queue_t queue = [[RefreshManager sharedManager] asyncQueue];
+-	dispatch_async(queue, ^() {
+-		
+ 	ActivityItem *aItem = [[request userInfo] objectForKey:@"log"];
+ 	Folder *refreshedFolder = [[request userInfo] objectForKey:@"folder"];
+ 	LLog(@"Refresh Done: %@",[refreshedFolder feedURL]);
+@@ -331,59 +376,57 @@
+ 		}
+ 			
+ 		Database *db = [Database sharedDatabase];
+-		__block NSInteger newArticlesFromFeed = 0;
++		NSInteger newArticlesFromFeed = 0;
+ 
+ 		// Here's where we add the articles to the database
+ 		if ([articleArray count] > 0)
+ 		{
+-			[db doTransactionWithBlock:^(BOOL *rollback) {
+-			NSArray * guidHistory = [db guidHistoryForFolderId:[refreshedFolder itemId]];
+-			[refreshedFolder clearCache];
+-			//BOOL hasCache = [db initArticleArray:refreshedFolder];
++			[db beginTransaction];
++		NSArray * guidHistory = [db guidHistoryForFolderId:[refreshedFolder itemId]];
++		[refreshedFolder clearCache];
++		//BOOL hasCache = [db initArticleArray:refreshedFolder];
+ 
+-			for (Article * article in articleArray)
+-			{
+-				if ([db createArticle:[refreshedFolder itemId] article:article guidHistory:guidHistory] && ([article status] == MA_MsgStatus_New))
+-					newArticlesFromFeed++;
+-			}
++		for (Article * article in articleArray)
++		{
++			if ([db createArticle:[refreshedFolder itemId] article:article guidHistory:guidHistory] && ([article status] == MA_MsgStatus_New))
++				newArticlesFromFeed++;
++		}
+ 
+-			// Set the last update date for this folder.
+-			[db setFolderLastUpdate:[refreshedFolder itemId] lastUpdate:[NSDate date]];
+-			}]; //end transaction block
++		// Set the last update date for this folder.
++		[db setFolderLastUpdate:[refreshedFolder itemId] lastUpdate:[NSDate date]];
++			[db commitTransaction];
+ 		}
+ 
+ 		if ([folderLastUpdateString isEqualToString:@""] || [folderLastUpdateString isEqualToString:@"(null)"]) folderLastUpdateString=@"0";
+ 
+-		[db doTransactionWithBlock:^(BOOL *rollback) {
+-		// Set the last update date given by the Open Reader server for this folder.
+-		[db setFolderLastUpdateString:[refreshedFolder itemId] lastUpdateString:folderLastUpdateString];
+-		// Set the HTML homepage for this folder.
+-		// a legal JSON string can have, as its outer "container", either an array or a dictionary/"object"
+-		if ([[dict objectForKey:@"alternate"] isKindOfClass:[NSArray class]])
+-			[db setFolderHomePage:[refreshedFolder itemId] newHomePage:[[[dict objectForKey:@"alternate"] objectAtIndex:0] objectForKey:@"href"]];
+-		else
+-			[db setFolderHomePage:[refreshedFolder itemId] newHomePage:[[dict objectForKey:@"alternate"] objectForKey:@"href"]];
+-		}]; //end transaction block
++		[db beginTransaction];
++	// Set the last update date given by the Open Reader server for this folder.
++	[db setFolderLastUpdateString:[refreshedFolder itemId] lastUpdateString:folderLastUpdateString];
++	// Set the HTML homepage for this folder.
++	// a legal JSON string can have, as its outer "container", either an array or a dictionary/"object"
++	if ([[dict objectForKey:@"alternate"] isKindOfClass:[NSArray class]])
++		[db setFolderHomePage:[refreshedFolder itemId] newHomePage:[[[dict objectForKey:@"alternate"] objectAtIndex:0] objectForKey:@"href"]];
++	else
++		[db setFolderHomePage:[refreshedFolder itemId] newHomePage:[[dict objectForKey:@"alternate"] objectForKey:@"href"]];
++		[db commitTransaction];
+ 		
+ 		// Add to count of new articles so far
+ 		countOfNewArticles += newArticlesFromFeed;
+ 
+ 		// Unread count may have changed
+-		dispatch_async(dispatch_get_main_queue(), ^{
+-			AppController *controller = APPCONTROLLER;
+-			[controller setStatusMessage:nil persist:NO];
+-			[controller showUnreadCountOnApplicationIconAndWindowTitle];
+-			[refreshedFolder clearNonPersistedFlag:MA_FFlag_Error];
+-
+-			// Send status to the activity log
+-			if (newArticlesFromFeed == 0)
+-				[aItem setStatus:NSLocalizedString(@"No new articles available", nil)];
+-			else
+-			{
+-				[aItem setStatus:[NSString stringWithFormat:NSLocalizedString(@"%d new articles retrieved", nil), newArticlesFromFeed]];
+-				[[NSNotificationCenter defaultCenter] postNotificationName:@"MA_Notify_ArticleListStateChange" object:refreshedFolder];
+-			}
+-		});
++		AppController *controller = APPCONTROLLER;
++		[controller setStatusMessage:nil persist:NO];
++		[controller showUnreadCountOnApplicationIconAndWindowTitle];
++		[refreshedFolder clearNonPersistedFlag:MA_FFlag_Error];
++
++		// Send status to the activity log
++		if (newArticlesFromFeed == 0)
++			[aItem setStatus:NSLocalizedString(@"No new articles available", nil)];
++		else
++		{
++			[aItem setStatus:[NSString stringWithFormat:NSLocalizedString(@"%d new articles retrieved", nil), newArticlesFromFeed]];
++			[[NSNotificationCenter defaultCenter] postNotificationName:@"MA_Notify_ArticleListStateChange" object:refreshedFolder];
++		}
+ 		
+ 		[dict release];
+ 
+@@ -436,7 +479,6 @@
+ 		[refreshedFolder clearNonPersistedFlag:MA_FFlag_Updating];
+ 		[refreshedFolder setNonPersistedFlag:MA_FFlag_Error];
+ 	}
+-	}); //block for dispatch_async
+ }
+ 
+ // callback
+@@ -471,9 +513,9 @@
+ 		}
+ 		LLog(@"%ld unread items for %@", [guidArray count], [request url]);
+ 		Database * db = [Database sharedDatabase];
+-		[db doTransactionWithBlock:^(BOOL *rollback) {
+-			[db markUnreadArticlesFromFolder:refreshedFolder guidArray:guidArray];
+-		}]; //end transaction block
++		[db beginTransaction];
++		[db markUnreadArticlesFromFolder:refreshedFolder guidArray:guidArray];
++		[db commitTransaction];
+ 	} @catch (NSException *exception) {
+ 		[aItem appendDetail:[NSString stringWithFormat:@"%@ %@",NSLocalizedString(@"Error", nil),exception]];
+ 		[aItem setStatus:NSLocalizedString(@"Error", nil)];
+@@ -484,12 +526,8 @@
+ 	}  // try/catch
+ 
+ 
+-		// If this folder also requires an image refresh, add that
+-		dispatch_queue_t queue = [[RefreshManager sharedManager] asyncQueue];
+-		if ([refreshedFolder flags] & MA_FFlag_CheckForImage)
+-			dispatch_async(queue, ^() {
+-				[[RefreshManager sharedManager] refreshFavIcon:refreshedFolder];
+-			});
++		// If this folder also requires an image refresh, add that        if ([refreshedFolder flags] & MA_FFlag_CheckForImage)
++            [[RefreshManager sharedManager] refreshFavIcon:refreshedFolder];
+ 
+ 	}
+ 	else //response status other than OK (200)
+@@ -533,9 +571,9 @@
+ 		}
+ 		LLog(@"%ld starred items for %@", [guidArray count], [request url]);
+ 		Database * db = [Database sharedDatabase];
+-		[db doTransactionWithBlock:^(BOOL *rollback) {
+-			[db markStarredArticlesFromFolder:refreshedFolder guidArray:guidArray];
+-		}]; //end transaction block
++		[db beginTransaction];
++		[db markStarredArticlesFromFolder:refreshedFolder guidArray:guidArray];
++		[db commitTransaction];
+ 		[refreshedFolder clearNonPersistedFlag:MA_FFlag_Updating];
+ 	} @catch (NSException *exception) {
+ 		[aItem appendDetail:[NSString stringWithFormat:@"%@ %@",NSLocalizedString(@"Error", nil),exception]];
+@@ -744,9 +782,9 @@
+ 				for (Folder * f in localFolders) {
+ 					if (IsGoogleReaderFolder(f) && [[f feedURL] isEqualToString:feedURL]) {
+ 						Database *db = [Database sharedDatabase];
+-						[db doTransactionWithBlock:^(BOOL *rollback) {
+-							[db setFolderHomePage:[f itemId] newHomePage:homePageURL];
+-						}];
++						[db beginTransaction];
++						[db setFolderHomePage:[f itemId] newHomePage:homePageURL];
++						[db commitTransaction];
+ 						break;
+ 					}
+ 				}
+@@ -949,10 +987,10 @@
+     
+     if (!folder)
+     {
+-		__block NSInteger newFolderId;
+-        [db doTransactionWithBlock:^(BOOL *rollback) {
++		NSInteger newFolderId;
++        [db beginTransaction];
+ 	        newFolderId = [db addFolder:[parentNumber intValue] afterChild:-1 folderName:folderName type:MA_Group_Folder canAppendIndex:NO];
+-        }]; //end transaction block
++        [db commitTransaction];
+         
+         parentNumber = [NSNumber numberWithInteger:newFolderId];
+     }

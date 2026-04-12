@@ -1,0 +1,11 @@
+--- vienna/ArticleFilter.m
++++ vienna/ArticleFilter.m
+@@ -70,7 +70,7 @@
+  */
+ +(BOOL)twoDaysFilterComparator:(Article *)theArticle
+ {
+-	return ([[theArticle date] compare:[[NSCalendarDate date] dateByAddingTimeInterval:-172800]] != NSOrderedAscending);
++	return ([[theArticle date] compare:[[NSCalendarDate date] XP_dateByAddingTimeInterval:-172800]] != NSOrderedAscending);
+ }
+ 
+ /* unreadOrFlaggedArticleFilterComparator

@@ -1,0 +1,31 @@
+--- vienna/UnifiedDisplayView.m
++++ vienna/UnifiedDisplayView.m
+@@ -19,6 +19,10 @@
+ //
+ 
+ #import "UnifiedDisplayView.h"
++
++@interface UnifiedDisplayView ()
++- (void)resubmitWebView:(WebView *)sender;
++@end
+ #import "ArticleController.h"
+ #import "AppController.h"
+ #import "ArticleCellView.h"
+@@ -841,7 +845,7 @@
+  */
+ -(void)selectFolderWithFilter:(int)newFolderId
+ {
+-	@autoreleasepool {
++	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+ 		currentSelectedRow = -1;
+ 		[rowHeightArray removeAllObjects];
+ 		[articleList reloadData];
+@@ -849,7 +853,7 @@
+ 			[articleList scrollRowToVisible:0];
+ 		else
+ 			[self selectArticleAfterReload];
+-	}
++	[pool drain];
+ }
+ 
+ /* handleRefreshArticle
