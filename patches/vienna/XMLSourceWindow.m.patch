@@ -1,0 +1,31 @@
+--- vienna/XMLSourceWindow.m
++++ vienna/XMLSourceWindow.m
+@@ -77,13 +77,13 @@
+ 				if (xmlSource != nil)
+ 				{
+ 					// Get rid of potential body, script, CDATA and other tags within the string that may cause a mess.
+-					xmlSource = [xmlSource stringByReplacingOccurrencesOfString:@"&" withString:@"&amp;"];
+-					xmlSource = [xmlSource stringByReplacingOccurrencesOfString:@"[" withString:@"&#91;"];
+-					xmlSource = [xmlSource stringByReplacingOccurrencesOfString:@"]" withString:@"&#93;"];
+-					xmlSource = [xmlSource stringByReplacingOccurrencesOfString:@"<" withString:@"&lt;"];
+-					xmlSource = [xmlSource stringByReplacingOccurrencesOfString:@">" withString:@"&gt;"];
++					xmlSource = [xmlSource XP_stringByReplacingOccurrencesOfString:@"&" withString:@"&amp;"];
++					xmlSource = [xmlSource XP_stringByReplacingOccurrencesOfString:@"[" withString:@"&#91;"];
++					xmlSource = [xmlSource XP_stringByReplacingOccurrencesOfString:@"]" withString:@"&#93;"];
++					xmlSource = [xmlSource XP_stringByReplacingOccurrencesOfString:@"<" withString:@"&lt;"];
++					xmlSource = [xmlSource XP_stringByReplacingOccurrencesOfString:@">" withString:@"&gt;"];
+ 					
+-					syntaxHighlighter = [syntaxHighlighter stringByReplacingOccurrencesOfString:@"$XMLSourceData" withString:xmlSource];
++					syntaxHighlighter = [syntaxHighlighter XP_stringByReplacingOccurrencesOfString:@"$XMLSourceData" withString:xmlSource];
+ 				}
+ 				else
+ 					errorDescription = [error localizedDescription];
+@@ -94,7 +94,7 @@
+ 				syntaxHighlighter = [NSString stringWithFormat:@"<html><body><br><br><br><center>%@</center><body></html>", errorDescription];
+ 			}
+ 				
+-			[[sourceWebView mainFrame] loadHTMLString:syntaxHighlighter baseURL:[NSURL fileURLWithPath:pathToSyntaxHighlighter isDirectory:NO]];
++			[[sourceWebView mainFrame] loadHTMLString:syntaxHighlighter baseURL:[NSURL XP_fileURLWithPath:pathToSyntaxHighlighter isDirectory:NO]];
+ 		}
+ 	}	
+ }

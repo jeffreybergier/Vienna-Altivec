@@ -1,0 +1,177 @@
+--- ASIHTTPRequest.m
++++ ASIHTTPRequest.m
+@@ -135,7 +135,9 @@
+ // Hangs around forever, but will be blocked unless there are requests underway
+ static NSThread *networkThread = nil;
+ 
+-static NSOperationQueue *sharedQueue = nil;
++// Tiger: NSOperationQueue is 10.5+ only. sharedQueue is only used for PAC proxy
++// requests, which are disabled below. On 10.5+ this remains nil (no-op).
++static id sharedQueue = nil;
+ 
+ // Private stuff
+ @interface ASIHTTPRequest ()
+@@ -269,8 +271,7 @@
+ 		ASIRequestCancelledError = [[NSError alloc] initWithDomain:NetworkRequestErrorDomain code:ASIRequestCancelledErrorType userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"The request was cancelled",NSLocalizedDescriptionKey,nil]];
+ 		ASIUnableToCreateRequestError = [[NSError alloc] initWithDomain:NetworkRequestErrorDomain code:ASIUnableToCreateRequestErrorType userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Unable to create request (bad url?)",NSLocalizedDescriptionKey,nil]];
+ 		ASITooMuchRedirectionError = [[NSError alloc] initWithDomain:NetworkRequestErrorDomain code:ASITooMuchRedirectionErrorType userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"The request failed because it redirected too many times",NSLocalizedDescriptionKey,nil]];
+-		sharedQueue = [[NSOperationQueue alloc] init];
+-		[sharedQueue setMaxConcurrentOperationCount:4];
++		// Tiger: NSOperationQueue not used; sharedQueue left nil.
+ 
+ 	}
+ }
+@@ -818,7 +819,8 @@
+ #if DEBUG_REQUEST_STATUS || DEBUG_THROTTLING
+ 	ASI_DEBUG_LOG(@"[STATUS] Starting asynchronous request %@",self);
+ #endif
+-	[sharedQueue addOperation:self];
++	// Tiger: NSOperationQueue not available. Start directly on ASI's own thread.
++	[self start];
+ }
+ 
+ #pragma mark concurrency
+@@ -3650,17 +3652,24 @@
+ - (void)handleStreamError
+ 
+ {
+-	NSError *underlyingError = [NSMakeCollectable(CFReadStreamCopyError((CFReadStreamRef)[self readStream])) autorelease];
++	// Tiger (10.4): CFReadStreamCopyError (returns CFErrorRef) is 10.5+ only.
++	// Use CFReadStreamGetError (returns CFStreamError struct) and map to NSError.
++	NSError *underlyingError = nil;
++	{
++		CFStreamError cfErr = CFReadStreamGetError((CFReadStreamRef)[self readStream]);
++		if (cfErr.error != 0) {
++			NSString *domain = (cfErr.domain == kCFStreamErrorDomainPOSIX)
++				? NSPOSIXErrorDomain : NSOSStatusErrorDomain;
++			underlyingError = [NSError errorWithDomain:domain code:cfErr.error userInfo:nil];
++		}
++	}
+ 
+ 	if (![self error]) { // We may already have handled this error
+ 		
+-		// First, check for a 'socket not connected', 'broken pipe' or 'connection lost' error
++		// First, check for a 'socket not connected' or 'broken pipe' error
+ 		// This may occur when we've attempted to reuse a connection that should have been closed
+-		// If we get this, we need to retry the request
+-		// We'll only do this once - if it happens again on retry, we'll give up
+-		// -1005 = kCFURLErrorNetworkConnectionLost - this doesn't seem to be declared on Mac OS 10.5
+-		if (([[underlyingError domain] isEqualToString:NSPOSIXErrorDomain] && ([underlyingError code] == ENOTCONN || [underlyingError code] == EPIPE)) 
+-			|| ([[underlyingError domain] isEqualToString:(NSString *)kCFErrorDomainCFNetwork] && [underlyingError code] == -1005)) {
++		// Tiger (10.4): kCFErrorDomainCFNetwork is 10.6+ only (NULL on Tiger); omit that check.
++		if ([[underlyingError domain] isEqualToString:NSPOSIXErrorDomain] && ([underlyingError code] == ENOTCONN || [underlyingError code] == EPIPE)) {
+ 			if ([self retryUsingNewConnection]) {
+ 				return;
+ 			}
+@@ -3829,10 +3838,6 @@
+ 
+ #if TARGET_OS_IPHONE
+ 			NSDictionary *proxySettings = [NSMakeCollectable(CFNetworkCopySystemProxySettings()) autorelease];
+-#else
+-			NSDictionary *proxySettings = [NSMakeCollectable(SCDynamicStoreCopyProxies(NULL)) autorelease];
+-#endif
+-
+ 			proxies = [NSMakeCollectable(CFNetworkCopyProxiesForURL((CFURLRef)[self url], (CFDictionaryRef)proxySettings)) autorelease];
+ 
+ 			// Now check to see if the proxy settings contained a PAC url, we need to run the script to get the real list of proxies if so
+@@ -3842,6 +3847,11 @@
+ 				[self fetchPACFile];
+ 				return NO;
+ 			}
++#else
++			// Tiger (10.4): CFNetworkCopyProxiesForURL is 10.5+ only (null function pointer on Tiger).
++			// Skip proxy auto-detection and use a direct (no-proxy) connection.
++			proxies = [NSArray array];
++#endif
+ 		}
+ 
+ 		if (!proxies) {
+@@ -3909,18 +3919,14 @@
+ 
+ 	[self setPACFileRequest:PACRequest];
+ 
+-	// Force this request to run before others in the shared queue
+-	[PACRequest setQueuePriority:NSOperationQueuePriorityHigh];
+-
+ 	// We'll treat failure to download the PAC file the same as success - if we were unable to fetch a PAC file, we proceed as if we have no proxy server and let this request fail itself if necessary
+ 	[PACRequest setDelegate:self];
+ 	[PACRequest setDidFinishSelector:@selector(finishedDownloadingPACFile:)];
+ 	[PACRequest setDidFailSelector:@selector(finishedDownloadingPACFile:)];
+ 	[PACRequest startAsynchronous];
+ 
+-	// Temporarily increase the number of operations in the shared queue to give our request a chance to run
+ 	[connectionsLock lock];
+-	[sharedQueue setMaxConcurrentOperationCount:[sharedQueue maxConcurrentOperationCount]+1];
++	// Tiger: sharedQueue is nil, no-op.
+ 	[connectionsLock unlock];
+ }
+ 
+@@ -4002,9 +4008,8 @@
+ 		[self runPACScript:[theRequest responseString]];
+ 	}
+ 
+-	// Set the shared queue's maxConcurrentOperationCount back to normal
++	// Tiger: sharedQueue is nil, no-op.
+ 	[connectionsLock lock];
+-	[sharedQueue setMaxConcurrentOperationCount:[sharedQueue maxConcurrentOperationCount]-1];
+ 	[connectionsLock unlock];
+ 
+ 	// We no longer need our PAC file request
+@@ -4689,11 +4694,16 @@
+ #pragma mark queue
+ 
+ // Returns the shared queue
+-+ (NSOperationQueue *)sharedQueue
+++ (id)sharedQueue
+ {
+     return [[sharedQueue retain] autorelease];
+ }
+ 
++// Tiger stubs — NSOperation methods called by ASINetworkQueue
++- (void)setQueuePriority:(NSInteger)priority { (void)priority; }
++- (NSInteger)queuePriority { return 0; }
++- (void)addDependency:(id)operation { (void)operation; }
++
+ #pragma mark cache
+ 
+ + (void)setDefaultCache:(id <ASICacheDelegate>)cache
+@@ -4776,8 +4786,13 @@
+ 	if (networkThread == nil) {
+ 		@synchronized(self) {
+ 			if (networkThread == nil) {
+-				networkThread = [[NSThread alloc] initWithTarget:self selector:@selector(runRequests) object:nil];
+-				[networkThread start];
++				// Tiger (10.4): NSThread initWithTarget:selector:object: is 10.5+ only.
++				// Spawn via detachNewThreadSelector; runRequests stores the thread ref.
++				[NSThread detachNewThreadSelector:@selector(runRequests) toTarget:self withObject:nil];
++				// Spin until runRequests has stored the thread reference.
++				while (networkThread == nil) {
++					[NSThread sleepForTimeInterval:0.001];
++				}
+ 			}
+ 		}
+ 	}
+@@ -4786,15 +4801,21 @@
+ 
+ + (void)runRequests
+ {
++	// Capture and retain before entering the run loop so threadForRequest: can return.
++	networkThread = [[NSThread currentThread] retain];
++	// Register run loop for CrossPlatform performSelector:onThread: polyfill (Tiger 10.4).
++	[[[NSThread currentThread] threadDictionary] setObject:[NSRunLoop currentRunLoop]
++	                                                forKey:@"_XPRunLoop"];
++
+ 	// Should keep the runloop from exiting
+ 	CFRunLoopSourceContext context = {0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+ 	CFRunLoopSourceRef source = CFRunLoopSourceCreate(kCFAllocatorDefault, 0, &context);
+ 	CFRunLoopAddSource(CFRunLoopGetCurrent(), source, kCFRunLoopDefaultMode);
+ 
+-    BOOL runAlways = YES; // Introduced to cheat Static Analyzer
++	BOOL runAlways = YES; // Introduced to cheat Static Analyzer
+ 	while (runAlways) {
+ 		NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+-        CFRunLoopRunInMode(kCFRunLoopDefaultMode, 1.0e10, true);
++		CFRunLoopRunInMode(kCFRunLoopDefaultMode, 1.0e10, true);
+ 		[pool drain];
+ 	}
+ 

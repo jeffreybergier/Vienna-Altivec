@@ -230,6 +230,15 @@
  		[refreshedFolder clearNonPersistedFlag:MA_FFlag_Updating];
  	} @catch (NSException *exception) {
  		[aItem appendDetail:[NSString stringWithFormat:@"%@ %@",NSLocalizedString(@"Error", nil),exception]];
+@@ -704,7 +742,7 @@
+ 		NSString * feedID = [feed objectForKey:@"id"];
+ 		if (feedID == nil)
+ 			break;
+-		NSString * feedURL = [feedID stringByReplacingOccurrencesOfString:@"feed/" withString:@"" options:0 range:NSMakeRange(0, 5)];
++		NSString * feedURL = [feedID XM_stringByReplacingOccurrencesOfString:@"feed/" withString:@"" options:0 range:NSMakeRange(0, 5)];
+ 		if (![feedURL hasPrefix:@"http:"] && ![feedURL hasPrefix:@"https:"])
+             feedURL = [NSString stringWithFormat:@"https://%@/reader/public/atom/%@", openReaderHost, feedURL];
+ 		
 @@ -744,9 +782,9 @@
  				for (Folder * f in localFolders) {
  					if (IsGoogleReaderFolder(f) && [[f feedURL] isEqualToString:feedURL]) {

@@ -29,6 +29,9 @@ apply_dir "$PATCHES_DIR/deps/MASPreferences" "$META_DIR/deps/MASPreferences" 0
 echo " > patches/deps/PXListView/ → build-stage/deps/PXListView/"
 apply_dir "$PATCHES_DIR/deps/PXListView" "$META_DIR/deps/PXListView" 0
 
+echo " > patches/deps/ASIHTTPRequest/ → build-stage/deps/ASIHTTPRequest/"
+apply_dir "$PATCHES_DIR/deps/ASIHTTPRequest" "$META_DIR/deps/ASIHTTPRequest" 0
+
 echo " > patches/deps/FMDB/ → build-stage/deps/FMDB/"
 apply_dir "$PATCHES_DIR/deps/FMDB" "$META_DIR/deps/FMDB" 0
 

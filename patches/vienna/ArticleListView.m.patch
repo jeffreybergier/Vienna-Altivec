@@ -1,0 +1,14 @@
+--- vienna/ArticleListView.m
++++ vienna/ArticleListView.m
+@@ -1943,9 +1943,9 @@
+ 	if (pathToErrorPage != nil)
+ 	{
+ 		NSString *errorMessage = [NSString stringWithContentsOfFile:pathToErrorPage encoding:NSUTF8StringEncoding error:NULL];
+-		errorMessage = [errorMessage stringByReplacingOccurrencesOfString: @"$ErrorInformation" withString: [error localizedDescription]];
++		errorMessage = [errorMessage XP_stringByReplacingOccurrencesOfString: @"$ErrorInformation" withString: [error localizedDescription]];
+ 		if (errorMessage != nil)
+-			[frame loadAlternateHTMLString:errorMessage baseURL:[NSURL fileURLWithPath:pathToErrorPage isDirectory:NO] forUnreachableURL:[[dataSource request] URL]];
++			[frame loadAlternateHTMLString:errorMessage baseURL:[NSURL XP_fileURLWithPath:pathToErrorPage isDirectory:NO] forUnreachableURL:[[dataSource request] URL]];
+ 	}		
+ }
+ 

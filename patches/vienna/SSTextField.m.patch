@@ -1,0 +1,67 @@
+--- vienna/SSTextField.m
++++ vienna/SSTextField.m
+@@ -38,39 +38,45 @@
+ 	// bottom white highlight
+ 	NSRect hightlightFrame = NSMakeRect(0.0, 10.0, [self bounds].size.width, [self bounds].size.height-10.0);
+ 	[[NSColor colorWithCalibratedWhite:1.0 alpha:0.394] set];
+-	[[NSBezierPath bezierPathWithRoundedRect:hightlightFrame xRadius:3.6 yRadius:3.6] fill];
+-	
+-	
++	[[NSBezierPath XP_bezierPathWithRoundedRect:hightlightFrame xRadius:3.6 yRadius:3.6] fill];
++
++
+ 	// black outline
++	// NSGradient is 10.5+ only. On Tiger the static cls_ref resolves to a garbage
++	// non-nil value (0x20), crashing objc_msgSend. Use NSClassFromString which is
++	// always safe and returns nil when the class doesn't exist.
+ 	NSRect blackOutlineFrame = NSMakeRect(0.0, 0.0, [self bounds].size.width, [self bounds].size.height-1.0);
+-	NSGradient *gradient = nil;
+-	if ([NSApp isActive]) {
+-		gradient = [[[NSGradient alloc] initWithStartingColor:[NSColor colorWithCalibratedWhite:0.24 alpha:1.0] endingColor:[NSColor colorWithCalibratedWhite:0.374 alpha:1.0]] autorelease];
++	Class gradientClass = NSClassFromString(@"NSGradient");
++	if (gradientClass) {
++		id gradient = [NSApp isActive]
++			? [[[gradientClass alloc] initWithStartingColor:[NSColor colorWithCalibratedWhite:0.24 alpha:1.0] endingColor:[NSColor colorWithCalibratedWhite:0.374 alpha:1.0]] autorelease]
++			: [[[gradientClass alloc] initWithStartingColor:[NSColor colorWithCalibratedWhite:0.55 alpha:1.0] endingColor:[NSColor colorWithCalibratedWhite:0.558 alpha:1.0]] autorelease];
++		[gradient drawInBezierPath:[NSBezierPath XP_bezierPathWithRoundedRect:blackOutlineFrame xRadius:3.6 yRadius:3.6] angle:90];
++	} else {
++		CGFloat gray = [NSApp isActive] ? 0.30 : 0.55;
++		[[NSColor colorWithCalibratedWhite:gray alpha:1.0] set];
++		[[NSBezierPath XP_bezierPathWithRoundedRect:blackOutlineFrame xRadius:3.6 yRadius:3.6] fill];
+ 	}
+-	else {
+-		gradient = [[[NSGradient alloc] initWithStartingColor:[NSColor colorWithCalibratedWhite:0.55 alpha:1.0] endingColor:[NSColor colorWithCalibratedWhite:0.558 alpha:1.0]] autorelease];
+-	}
+-	[gradient drawInBezierPath:[NSBezierPath bezierPathWithRoundedRect:blackOutlineFrame xRadius:3.6 yRadius:3.6] angle:90];
+-	
+-	
++
++
+ 	// top inner shadow
+ 	NSRect shadowFrame = NSMakeRect(1, 1, [self bounds].size.width-2.0, 10.0);
+ 	[[NSColor colorWithCalibratedWhite:0.88 alpha:1.0] set];
+-	[[NSBezierPath bezierPathWithRoundedRect:shadowFrame xRadius:2.9 yRadius:2.9] fill];
+-	
+-	
++	[[NSBezierPath XP_bezierPathWithRoundedRect:shadowFrame xRadius:2.9 yRadius:2.9] fill];
++
++
+ 	// main white area
+ 	NSRect whiteFrame = NSMakeRect(1, 2, [self bounds].size.width-2.0, [self bounds].size.height-4.0);
+ 	[[NSColor whiteColor] set];
+-	[[NSBezierPath bezierPathWithRoundedRect:whiteFrame xRadius:2.6 yRadius:2.6] fill];
+-	
++	[[NSBezierPath XP_bezierPathWithRoundedRect:whiteFrame xRadius:2.6 yRadius:2.6] fill];
++
+ 
+ 	// draw the keyboard focus ring if we're the first responder and the application is active
+ 	if (([[self window] firstResponder] == [self currentEditor]) && [NSApp isActive])
+-	{	
++	{
+ 		[NSGraphicsContext saveGraphicsState];
+ 		NSSetFocusRingStyle(NSFocusRingOnly);
+-		[[NSBezierPath bezierPathWithRoundedRect:blackOutlineFrame xRadius:3.6 yRadius:3.6] fill]; 
++		[[NSBezierPath XP_bezierPathWithRoundedRect:blackOutlineFrame xRadius:3.6 yRadius:3.6] fill];
+ 		[NSGraphicsContext restoreGraphicsState];
+ 	}
+ 	else

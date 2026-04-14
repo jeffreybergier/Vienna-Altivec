@@ -30,6 +30,32 @@
  }
  
  + (NSSet *)keyPathsForValuesAffectingValueForKey:(NSString *)key
+@@ -357,10 +366,10 @@
+ 			if (pathToErrorPage != nil)
+ 			{
+ 				NSString *errorMessage = [NSString stringWithContentsOfFile:pathToErrorPage encoding:NSUTF8StringEncoding error:NULL];
+-				errorMessage = [errorMessage stringByReplacingOccurrencesOfString: @"$ErrorInformation" withString: [error localizedDescription]];
++				errorMessage = [errorMessage XP_stringByReplacingOccurrencesOfString: @"$ErrorInformation" withString: [error localizedDescription]];
+ 				if (errorMessage != nil)
+ 				{
+-					[frame loadAlternateHTMLString:errorMessage baseURL:[NSURL fileURLWithPath:pathToErrorPage isDirectory:NO] forUnreachableURL:[[[frame provisionalDataSource] request] URL]];
++					[frame loadAlternateHTMLString:errorMessage baseURL:[NSURL XP_fileURLWithPath:pathToErrorPage isDirectory:NO] forUnreachableURL:[[[frame provisionalDataSource] request] URL]];
+ 				}
+ 				NSString *unreachableURL = [[[frame provisionalDataSource] unreachableURL] absoluteString];
+ 				if (unreachableURL != nil)
+@@ -413,10 +422,10 @@
+ 			if (pathToErrorPage != nil)
+ 			{
+ 				NSString *errorMessage = [NSString stringWithContentsOfFile:pathToErrorPage encoding:NSUTF8StringEncoding error:NULL];
+-				errorMessage = [errorMessage stringByReplacingOccurrencesOfString: @"$ErrorInformation" withString: [error localizedDescription]];
++				errorMessage = [errorMessage XP_stringByReplacingOccurrencesOfString: @"$ErrorInformation" withString: [error localizedDescription]];
+ 				if (errorMessage != nil)
+ 				{
+-					[frame loadAlternateHTMLString:errorMessage baseURL:[NSURL fileURLWithPath:pathToErrorPage isDirectory:NO] forUnreachableURL:[[[frame dataSource] request] URL]];
++					[frame loadAlternateHTMLString:errorMessage baseURL:[NSURL XP_fileURLWithPath:pathToErrorPage isDirectory:NO] forUnreachableURL:[[[frame dataSource] request] URL]];
+ 				}
+ 			}		
+ 		}
 @@ -536,7 +545,7 @@
  	if ( [openDlg runModal] == NSOKButton )
  	{

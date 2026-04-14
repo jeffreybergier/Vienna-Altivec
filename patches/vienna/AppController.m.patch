@@ -9,17 +9,16 @@
  #import <WebKit/WebKit.h>
  #include <mach/mach_port.h>
  #include <mach/mach_interface.h>
-@@ -121,6 +121,9 @@
+@@ -121,6 +121,8 @@
  	-(void)searchArticlesWithString:(NSString *)searchString;
  	-(void)sourceWindowWillClose:(NSNotification *)notification;
  	-(IBAction)cancelAllRefreshesToolbar:(id)sender;
-+	-(void)showSystemProfileInfoAlert;
 +	-(BOOL)handleKeyDown:(unichar)keyChar withFlags:(NSUInteger)flags;
 +	-(IBAction)markReadToggle:(id)sender;
  @end
  
  // Static constant strings that are typically never tweaked
-@@ -160,7 +163,7 @@
+@@ -160,7 +162,7 @@
  	@"EEE dd MMM yy HH:mmss",      @"EEE dd MMM yyyy HH:mmss",
  	@"EEEE dd MMMM yy",            @"EEEE dd MMMM yyyy",
  };
@@ -28,7 +27,7 @@
  // C array of NSDateFormatter's : creating a NSDateFormatter is very expensive, so we create
  //  those we need early in the program launch and keep them in memory.
  static NSDateFormatter * dateFormatterArray[kNumberOfDateFormatters];
-@@ -168,8 +171,6 @@
+@@ -168,8 +170,6 @@
  static NSLock * dateFormatters_lock;
  static NSLocale * enUSLocale;
  
@@ -37,7 +36,7 @@
  /* init
   * Class instance initialisation.
   */
-@@ -198,14 +199,8 @@
+@@ -198,14 +198,8 @@
  -(void)awakeFromNib
  {
  
@@ -53,7 +52,7 @@
    	
  
  	Preferences * prefs = [Preferences standardPreferences];
-@@ -509,8 +504,8 @@
+@@ -509,8 +503,8 @@
  	[mainWindow setToolbar:toolbar];
  	
  	// Give the status bar and filter string an embossed look
@@ -64,7 +63,7 @@
  	[currentFilterTextField setStringValue:@""];
  	
  	// Preload dictionary of standard URLs
-@@ -569,23 +564,6 @@
+@@ -569,23 +563,6 @@
  	// Add the app to the status bar if needed.
  	[self showAppInStatusBar];
  	
@@ -88,7 +87,18 @@
  	// Start the check timer
  	[self handleCheckFrequencyChange:nil];
  	
-@@ -721,7 +699,7 @@
+@@ -604,10 +581,6 @@
+ 	// Hook up the key sequence properly now that all NIBs are loaded.
+ 	[[foldersTree mainView] setNextKeyView:[[browserView primaryTabItemView] mainView]];
+ 	
+-    // Check if we have previously asked the user to send anonymous system profile
+-    if([[NSUserDefaults standardUserDefaults] objectForKey:MAPref_SendSystemProfileInfo] == nil) {
+-        [self showSystemProfileInfoAlert];
+-    }
+ 
+ 	// Do safe initialisation.
+ 	[self performSelector:@selector(doSafeInitialisation)
+@@ -721,7 +694,7 @@
  		[activityWindow performClose:self];
  		
  		// Put back the original app icon
@@ -97,7 +107,25 @@
  		
  		// Save the open tabs
  		[browserView saveOpenTabs];
-@@ -1718,16 +1696,7 @@
+@@ -832,7 +805,7 @@
+ 	
+ 	if (![fileManager fileExistsAtPath:path isDirectory:&isDir])
+ 	{
+-		if (![fileManager createDirectoryAtPath:path withIntermediateDirectories:YES attributes:NULL error:NULL])
++		if (![fileManager XP_createDirectoryAtPath:path withIntermediateDirectories:YES attributes:NULL error:NULL])
+ 		{
+ 			runOKAlertPanel(NSLocalizedString(@"Cannot create folder title", nil), NSLocalizedString(@"Cannot create folder body", nil), path);
+ 			return NO;
+@@ -1120,7 +1093,7 @@
+ 	{
+         modifiedDateString = [dateString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+     	modifiedDateString = [modifiedDateString
+-                            stringByReplacingOccurrencesOfString:@":" withString:@""
++                            XP_stringByReplacingOccurrencesOfString:@":" withString:@""
+                             options:0 range:NSMakeRange(20,modifiedDateString.length-20)];
+     }
+     else
+@@ -1718,16 +1691,7 @@
   */
  -(void)growlNotify:(id)notifyContext title:(NSString *)title description:(NSString *)description notificationName:(NSString *)notificationName
  {
@@ -115,7 +143,7 @@
  }
  
  /* growlNotificationWasClicked
-@@ -2017,7 +1986,7 @@
+@@ -2017,7 +1981,7 @@
  		& MA_NewArticlesNotification_Badge) == 0)
  	{
  		// Remove the badge if there was one.
@@ -124,7 +152,7 @@
  	}
  	else
  	{
-@@ -2031,32 +2000,32 @@
+@@ -2031,32 +1995,32 @@
   */
  -(void)showUnreadCountOnApplicationIconAndWindowTitle
  {
@@ -167,7 +195,7 @@
  
  	} // @synchronized
  }
-@@ -2897,10 +2866,10 @@
+@@ -2897,10 +2861,10 @@
  	}
  	
  	// Create then select the new folder.
@@ -182,7 +210,7 @@
  	
  	
  	if (folderId != -1)
-@@ -2947,10 +2916,10 @@
+@@ -2947,10 +2911,10 @@
  	}
  	else
  	{ //creates locally
@@ -197,3 +225,49 @@
  
  		if (folderId != -1)
  		{
+@@ -3497,7 +3461,7 @@
+ 	NSString * pathToAckFile = [thisBundle pathForResource:@"Acknowledgements" ofType:@"html"];
+ 	if (pathToAckFile != nil)
+ 	{
+-		[self createNewTab:[NSURL fileURLWithPath:pathToAckFile isDirectory:NO] inBackground:NO];
++		[self createNewTab:[NSURL XP_fileURLWithPath:pathToAckFile isDirectory:NO] inBackground:NO];
+ 	}
+ }
+ 
+@@ -4760,36 +4724,6 @@
+ 			 nil];
+ }
+ 
+-/*! showSystemProfileInfoAlert
+- * displays an alert asking the user to opt-in to sending anonymous system profile throug Sparkle
+- */
+--(void)showSystemProfileInfoAlert {
+-    NSAlert *alert = [[NSAlert alloc] init];
+-    [alert addButtonWithTitle:NSLocalizedString(@"OK", @"OK")];
+-    [alert addButtonWithTitle:NSLocalizedString(@"No thanks", @"No thanks")];
+-    [alert setMessageText:NSLocalizedString(@"Include anonymous system profile when checking for updates?", @"Include anonymous system profile when checking for updates?")];
+-    [alert setInformativeText:NSLocalizedString(@"Include anonymous system profile when checking for updates text", @"This helps Vienna development by letting us know what versions of Mac OS X are most popular amongst our users.")];
+-    [alert setAlertStyle:NSInformationalAlertStyle];
+-    int buttonClicked = alert.runModal;
+-    NSLog(@"buttonClicked: %d", buttonClicked);
+-    switch (buttonClicked) {
+-        case NSAlertFirstButtonReturn:
+-            /* Agreed to send system profile. Uses preferences to set value otherwise 
+-             the preference control is out of sync */
+-            [[Preferences standardPreferences] setSendSystemSpecs:YES];
+-            break;
+-        case NSAlertSecondButtonReturn:
+-            /* Declined to send system profile. Uses SUUpdater to set the value
+-             otherwise it stays nil instead of being set to 0 */
+-            [[SUUpdater sharedUpdater] setSendsSystemProfile:NO];
+-            break;
+-        default:
+-            break;
+-    }
+-    [alert release];
+-}
+-
+-
+ #pragma mark - MASPreferences
+ 
+ - (NSWindowController *)preferencesWindowController

@@ -1,5 +1,14 @@
 --- vienna/Folder.m
 +++ vienna/Folder.m
+@@ -144,7 +144,7 @@
+ 		imagesCacheFolder = [[Preferences standardPreferences] imagesFolder];
+ 		if (![fileManager fileExistsAtPath:imagesCacheFolder isDirectory:&isDir])
+ 		{
+-			if (![fileManager createDirectoryAtPath:imagesCacheFolder withIntermediateDirectories:YES attributes:nil error:nil])
++			if (![fileManager XP_createDirectoryAtPath:imagesCacheFolder withIntermediateDirectories:YES attributes:nil error:nil])
+ 			{
+ 				NSLog(@"Cannot create image cache at %@. Will not cache folder images in this session.", imagesCacheFolder);
+ 				imagesCacheFolder = nil;
 @@ -690,10 +690,10 @@
   */
  -(void)clearCache

@@ -1,0 +1,11 @@
+--- vienna/SearchMethod.m
++++ vienna/SearchMethod.m
+@@ -120,7 +120,7 @@
+ - (NSURL *)queryURLforSearchString:(NSString *)searchString;
+ {
+ 	NSURL * queryURL;
+-	NSString * temp = [[self searchQueryString] stringByReplacingOccurrencesOfString:@"$SearchTerm$" withString:searchString];
++	NSString * temp = [[self searchQueryString] XP_stringByReplacingOccurrencesOfString:@"$SearchTerm$" withString:searchString];
+ 	queryURL = cleanedUpAndEscapedUrlFromString(temp);
+     return queryURL;
+ }

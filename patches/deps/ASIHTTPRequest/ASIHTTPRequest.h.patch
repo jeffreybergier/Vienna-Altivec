@@ -1,0 +1,27 @@
+--- ASIHTTPRequest.h
++++ ASIHTTPRequest.h
+@@ -81,7 +81,9 @@
+ typedef void (^ASIDataBlock)(NSData *data);
+ #endif
+ 
+-@interface ASIHTTPRequest : NSOperation <NSCopying> {
++// Tiger (10.4): NSOperation/NSOperationQueue are 10.5+ only. ASIHTTPRequest manages
++// its own thread via NSThread (threadForRequest:), so NSOperation superclass is not needed.
++@interface ASIHTTPRequest : NSObject <NSCopying> {
+ 	
+ 	// The url for this operation, should include GET params in the query string where appropriate
+ 	NSURL *url; 
+@@ -845,7 +847,12 @@
+ #pragma mark queue
+ 
+ // Returns the shared queue
+-+ (NSOperationQueue *)sharedQueue;
+++ (id)sharedQueue;
++
++// Tiger stubs — NSOperation methods called by ASINetworkQueue internals
++- (void)setQueuePriority:(NSInteger)priority;
++- (NSInteger)queuePriority;
++- (void)addDependency:(id)operation;
+ 
+ #pragma mark cache
+ 

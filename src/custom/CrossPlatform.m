@@ -1,11 +1,13 @@
 #import "Vienna_Prefix.pch"
 #import "CrossPlatform.h"
 #import <objc/objc-runtime.h>
+#import <pthread.h>
 
 // ---- ObjC2 runtime polyfills for Tiger (10.4) ----
-// _objc_setProperty is called by @synthesize-generated setters for retain/copy props
+// GCC adds one leading underscore to C symbols, so objc_setProperty → _objc_setProperty in Mach-O,
+// which matches the reference emitted by @synthesize-generated setters.
 
-void _objc_setProperty(id self, SEL _cmd, ptrdiff_t offset, id newValue, BOOL atomic, signed char shouldCopy) {
+void objc_setProperty(id self, SEL _cmd, ptrdiff_t offset, id newValue, BOOL atomic, signed char shouldCopy) {
   (void)_cmd; (void)atomic;
   id *slot = (id *)((char *)self + offset);
   id oldValue = *slot;
@@ -22,14 +24,14 @@ void _objc_setProperty(id self, SEL _cmd, ptrdiff_t offset, id newValue, BOOL at
 }
 
 // Getter variant (for atomic retain properties — returns retained-then-autoreleased)
-id _objc_getProperty(id self, SEL _cmd, ptrdiff_t offset, BOOL atomic) {
+id objc_getProperty(id self, SEL _cmd, ptrdiff_t offset, BOOL atomic) {
   (void)_cmd; (void)atomic;
   id *slot = (id *)((char *)self + offset);
   return [[*slot retain] autorelease];
 }
 
 // Called when a collection is mutated during fast enumeration
-void _objc_enumerationMutation(id object) {
+void objc_enumerationMutation(id object) {
   (void)object;
   [[NSException exceptionWithName:NSGenericException reason:@"Collection mutated during enumeration" userInfo:nil] raise];
 }
@@ -141,6 +143,11 @@ BOOL createRecursiveDirectory(NSString * path)
 		m(self, sel, style);
 	}
 }
+// Tiger (10.4) NSCell lacks backgroundStyle/setBackgroundStyle:.
+// Provide stubs so subclasses (e.g. BJRVerticallyCenteredTextFieldCell) don't crash.
+// On 10.5+ the category is shadowed by the real implementation via the runtime.
+-(NSInteger)backgroundStyle { return 0; } // NSBackgroundStyleLight
+-(void)setBackgroundStyle:(NSInteger)style { (void)style; }
 @end
 
 @implementation NSWindow (XP_Compatibility)
@@ -305,6 +312,89 @@ BOOL createRecursiveDirectory(NSString * path)
   // 10.6+ only — return empty on Tiger to allow caller to launch the app
   (void)bundleIdentifier;
   return [NSArray array];
+}
+@end
+
+// ---- NSBezierPath rounded rect polyfill for Tiger (10.4) ----
+// bezierPathWithRoundedRect:xRadius:yRadius: is 10.5+ only.
+// On Tiger we construct the path manually using 4 straight edges and 4 cubic
+// Bézier corner arcs. Each quarter-ellipse is approximated with a single cubic
+// segment using the standard control-point offset factor k = 4(√2-1)/3 ≈ 0.5522847498,
+// which keeps the curve within 0.03% of a true ellipse. Radii are clamped to half
+// the rect dimensions to prevent self-intersection. On 10.5+ the runtime check
+// delegates to the real implementation so there is no visual regression on Leopard.
+@implementation NSBezierPath (XP_Compatibility)
++(NSBezierPath *)XP_bezierPathWithRoundedRect:(NSRect)rect xRadius:(CGFloat)xRadius yRadius:(CGFloat)yRadius {
+  SEL sel = @selector(bezierPathWithRoundedRect:xRadius:yRadius:);
+  if ([self respondsToSelector:sel]) {
+    typedef NSBezierPath *(*FnPtr)(id, SEL, NSRect, CGFloat, CGFloat);
+    return ((FnPtr)[self methodForSelector:sel])(self, sel, rect, xRadius, yRadius);
+  }
+  // Clamp radii to half the rect dimensions
+  CGFloat rx = MIN(xRadius, rect.size.width  * 0.5);
+  CGFloat ry = MIN(yRadius, rect.size.height * 0.5);
+  // Cubic bezier approximation constant for a quarter ellipse
+  const CGFloat k = 0.5522847498;
+  CGFloat kx = rx * k;
+  CGFloat ky = ry * k;
+  CGFloat x  = rect.origin.x;
+  CGFloat y  = rect.origin.y;
+  CGFloat w  = rect.size.width;
+  CGFloat h  = rect.size.height;
+  NSBezierPath *path = [NSBezierPath bezierPath];
+  [path moveToPoint:NSMakePoint(x + rx, y)];
+  // bottom edge → bottom-right corner
+  [path lineToPoint:NSMakePoint(x + w - rx, y)];
+  [path curveToPoint:NSMakePoint(x + w, y + ry)
+       controlPoint1:NSMakePoint(x + w - rx + kx, y)
+       controlPoint2:NSMakePoint(x + w, y + ry - ky)];
+  // right edge → top-right corner
+  [path lineToPoint:NSMakePoint(x + w, y + h - ry)];
+  [path curveToPoint:NSMakePoint(x + w - rx, y + h)
+       controlPoint1:NSMakePoint(x + w, y + h - ry + ky)
+       controlPoint2:NSMakePoint(x + w - rx + kx, y + h)];
+  // top edge → top-left corner
+  [path lineToPoint:NSMakePoint(x + rx, y + h)];
+  [path curveToPoint:NSMakePoint(x, y + h - ry)
+       controlPoint1:NSMakePoint(x + rx - kx, y + h)
+       controlPoint2:NSMakePoint(x, y + h - ry + ky)];
+  // left edge → bottom-left corner
+  [path lineToPoint:NSMakePoint(x, y + ry)];
+  [path curveToPoint:NSMakePoint(x + rx, y)
+       controlPoint1:NSMakePoint(x, y + ry - ky)
+       controlPoint2:NSMakePoint(x + rx - kx, y)];
+  [path closePath];
+  return path;
+}
+@end
+
+// Tiger (10.4): NSObject performSelector:onThread:withObject:waitUntilDone: is 10.5+ only.
+// The target thread must have stored [NSRunLoop currentRunLoop] under @"_XPRunLoop"
+// in its [[NSThread currentThread] threadDictionary] before the first call.
+@implementation NSObject (XP_ThreadPerform)
+-(void)performSelector:(SEL)aSelector onThread:(NSThread *)thr withObject:(id)arg waitUntilDone:(BOOL)wait;
+{
+  NSRunLoop *rl = [[thr threadDictionary] objectForKey:@"_XPRunLoop"];
+  if (!rl) {
+    // Thread hasn't registered yet — fall back to dispatching on main thread.
+    [self performSelectorOnMainThread:aSelector withObject:arg waitUntilDone:wait];
+    return;
+  }
+  [rl performSelector:aSelector target:self argument:arg order:0
+                modes:[NSArray arrayWithObject:NSDefaultRunLoopMode]];
+  CFRunLoopWakeUp([rl getCFRunLoop]);
+  // waitUntilDone:YES on background threads is not implemented — ASIHTTPRequest
+  // only ever passes NO for the network thread.
+}
+-(void)performSelector:(SEL)aSelector onThread:(NSThread *)thr withObject:(id)arg waitUntilDone:(BOOL)wait modes:(NSArray *)array;
+{
+  [self performSelector:aSelector onThread:thr withObject:arg waitUntilDone:wait];
+}
+@end
+
+@implementation NSThread (XP_Compatibility)
++ (BOOL)isMainThread {
+  return pthread_main_np() != 0;
 }
 @end
 

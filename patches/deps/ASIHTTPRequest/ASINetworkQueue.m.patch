@@ -1,0 +1,204 @@
+--- ASINetworkQueue.m
++++ ASINetworkQueue.m
+@@ -11,8 +11,10 @@
+ 
+ // Private stuff
+ @interface ASINetworkQueue ()
+-	- (void)resetProgressDelegate:(id *)progressDelegate;
+-	@property (assign) int requestsCount;
++- (void)resetProgressDelegate:(id *)progressDelegate;
++- (void)_drainQueue;
++- (void)_requestDidComplete:(ASIHTTPRequest *)request;
++@property (assign) int requestsCount;
+ @end
+ 
+ @implementation ASINetworkQueue
+@@ -20,10 +22,14 @@
+ - (id)init
+ {
+ 	self = [super init];
+-	[self setShouldCancelAllRequestsOnFailure:YES];
+-	[self setMaxConcurrentOperationCount:4];
+-	[self setSuspended:YES];
+-	
++	if (self) {
++		pendingRequests_ = [[NSMutableArray alloc] init];
++		activeRequests_  = [[NSMutableArray alloc] init];
++		lock_ = [[NSLock alloc] init];
++		suspended_ = YES;
++		maxConcurrentOperations_ = 4;
++		[self setShouldCancelAllRequestsOnFailure:YES];
++	}
+ 	return self;
+ }
+ 
+@@ -34,17 +40,75 @@
+ 
+ - (void)dealloc
+ {
+-	//We need to clear the queue on any requests that haven't got around to cleaning up yet, as otherwise they'll try to let us know if something goes wrong, and we'll be long gone by then
+-	for (ASIHTTPRequest *request in [self operations]) {
+-		[request setQueue:nil];
+-	}
++	NSUInteger i, count = [pendingRequests_ count] + [activeRequests_ count];
++	NSMutableArray *all = [NSMutableArray arrayWithCapacity:count];
++	[all addObjectsFromArray:activeRequests_];
++	[all addObjectsFromArray:pendingRequests_];
++	for (i = 0; i < [all count]; i++) {
++		[(ASIHTTPRequest *)[all objectAtIndex:i] setQueue:nil];
++	}
++	[pendingRequests_ release];
++	[activeRequests_ release];
++	[lock_ release];
+ 	[userInfo release];
+ 	[super dealloc];
+ }
+ 
+ - (void)setSuspended:(BOOL)suspend
+ {
+-	[super setSuspended:suspend];
++	suspended_ = suspend;
++	if (!suspend)
++		[self _drainQueue];
++}
++
++- (BOOL)isSuspended
++{
++	return suspended_;
++}
++
++- (void)setMaxConcurrentOperationCount:(NSInteger)count
++{
++	maxConcurrentOperations_ = (count > 0) ? count : 1;
++}
++
++- (NSInteger)maxConcurrentOperationCount
++{
++	return maxConcurrentOperations_;
++}
++
++- (NSArray *)operations
++{
++	[lock_ lock];
++	NSMutableArray *all = [NSMutableArray arrayWithCapacity:
++	                       [pendingRequests_ count] + [activeRequests_ count]];
++	[all addObjectsFromArray:activeRequests_];
++	[all addObjectsFromArray:pendingRequests_];
++	[lock_ unlock];
++	return all;
++}
++
++- (void)_drainQueue
++{
++	[lock_ lock];
++	while (!suspended_ && (NSInteger)[activeRequests_ count] < maxConcurrentOperations_
++	       && [pendingRequests_ count] > 0) {
++		ASIHTTPRequest *next = [[[pendingRequests_ objectAtIndex:0] retain] autorelease];
++		[pendingRequests_ removeObjectAtIndex:0];
++		[activeRequests_ addObject:next];
++		[lock_ unlock];
++		[next start];
++		[lock_ lock];
++	}
++	[lock_ unlock];
++}
++
++// Internal: called by requestFinished:/requestFailed: to advance the queue
++- (void)_requestDidComplete:(ASIHTTPRequest *)request
++{
++	[lock_ lock];
++	[activeRequests_ removeObject:request];
++	[lock_ unlock];
++	[self _drainQueue];
+ }
+ 
+ - (void)reset
+@@ -73,7 +137,18 @@
+ 	[self setTotalBytesToUpload:0];
+ 	[self setBytesDownloadedSoFar:0];
+ 	[self setTotalBytesToDownload:0];
+-	[super cancelAllOperations];
++
++	[lock_ lock];
++	NSArray *active  = [[activeRequests_ copy] autorelease];
++	NSArray *pending = [[pendingRequests_ copy] autorelease];
++	[pendingRequests_ removeAllObjects];
++	[lock_ unlock];
++
++	NSUInteger i;
++	for (i = 0; i < [active count]; i++)
++		[(ASIHTTPRequest *)[active objectAtIndex:i] cancel];
++	for (i = 0; i < [pending count]; i++)
++		[(ASIHTTPRequest *)[pending objectAtIndex:i] cancel];
+ }
+ 
+ - (void)setUploadProgressDelegate:(id)newDelegate
+@@ -115,15 +190,16 @@
+ - (void)addHEADOperation:(NSOperation *)operation
+ {
+ 	if ([operation isKindOfClass:[ASIHTTPRequest class]]) {
+-		
+ 		ASIHTTPRequest *request = (ASIHTTPRequest *)operation;
+ 		[request setRequestMethod:@"HEAD"];
+ 		[request setQueuePriority:10];
+ 		[request setShowAccurateProgress:YES];
+ 		[request setQueue:self];
+-		
+-		// Important - we are calling NSOperation's add method - we don't want to add this as a normal request!
+-		[super addOperation:request];
++		// Bypass requestsCount — HEAD requests are tracked separately
++		[lock_ lock];
++		[pendingRequests_ addObject:request];
++		[lock_ unlock];
++		[self _drainQueue];
+ 	}
+ }
+ 
+@@ -148,7 +224,7 @@
+ 		// If requests are added after the queue is started they will probably move the overall progress backwards anyway, so there's no value performing the HEAD requests first
+ 		// Instead, they'll update the total progress if and when they receive a content-length header
+ 		if ([[request requestMethod] isEqualToString:@"GET"]) {
+-			if ([self isSuspended]) {
++			if (suspended_) {
+ 				ASIHTTPRequest *HEADRequest = [request HEADRequest];
+ 				[self addHEADOperation:HEADRequest];
+ 				[request addDependency:HEADRequest];
+@@ -173,10 +249,12 @@
+ 	}
+ 	
+ 	[request setShowAccurateProgress:[self showAccurateProgress]];
+-	
+ 	[request setQueue:self];
+-	[super addOperation:request];
+ 
++	[lock_ lock];
++	[pendingRequests_ addObject:request];
++	[lock_ unlock];
++	[self _drainQueue];
+ }
+ 
+ - (void)requestStarted:(ASIHTTPRequest *)request
+@@ -203,6 +281,7 @@
+ - (void)requestFinished:(ASIHTTPRequest *)request
+ {
+ 	[self setRequestsCount:[self requestsCount]-1];
++	[self _requestDidComplete:request];
+ 	if ([self requestDidFinishSelector]) {
+ 		[[self delegate] performSelector:[self requestDidFinishSelector] withObject:request];
+ 	}
+@@ -216,6 +295,7 @@
+ - (void)requestFailed:(ASIHTTPRequest *)request
+ {
+ 	[self setRequestsCount:[self requestsCount]-1];
++	[self _requestDidComplete:request];
+ 	if ([self requestDidFailSelector]) {
+ 		[[self delegate] performSelector:[self requestDidFailSelector] withObject:request];
+ 	}
+@@ -227,7 +307,6 @@
+ 	if ([self shouldCancelAllRequestsOnFailure] && [self requestsCount] > 0) {
+ 		[self cancelAllOperations];
+ 	}
+-	
+ }
+ 
+ 

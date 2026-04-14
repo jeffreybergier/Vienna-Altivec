@@ -81,6 +81,17 @@ if [ -d "$STAGE_DIR/deps/PXListView" ]; then
   done
 fi
 
+echo " > build-stage/deps/ASIHTTPRequest/ vs vienna/Pods/ASIHTTPRequest/Classes/"
+ASIHTTP_SRC="$REPO_ROOT/vienna/Pods/ASIHTTPRequest/Classes"
+if [ -d "$STAGE_DIR/deps/ASIHTTPRequest" ]; then
+  find "$STAGE_DIR/deps/ASIHTTPRequest" -type f \( -name "*.m" -o -name "*.h" \) | sort | while read -r f; do
+    name="$(basename "$f")"
+    orig="$ASIHTTP_SRC/$name"
+    [ -f "$orig" ] || continue
+    save_patch "$orig" "$f" "$PATCHES_DIR/deps/ASIHTTPRequest/$name.patch" "$name"
+  done
+fi
+
 echo " > build-stage/deps/FMDB/ vs deps/fmdb/src/fmdb/"
 FMDB_SRC="$REPO_ROOT/deps/fmdb/src/fmdb"
 if [ -d "$STAGE_DIR/deps/FMDB" ]; then

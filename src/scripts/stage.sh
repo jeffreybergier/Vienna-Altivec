@@ -18,6 +18,7 @@ mkdir -p \
   "$META_DIR/deps/PXListView" \
   "$META_DIR/deps/MASPreferences" \
   "$META_DIR/deps/FMDB" \
+  "$META_DIR/deps/ASIHTTPRequest" \
   "$META_DIR/resources"
 
 # Vienna source files — flat in src/
@@ -44,6 +45,10 @@ cp "$VIENNA_DIR/Pods/PXListView/Classes/"*.{m,h} "$META_DIR/deps/PXListView/" 2>
 cp "$VIENNA_DIR/Pods/MASPreferences/"*.{m,h} "$META_DIR/deps/MASPreferences/" 2>/dev/null || true
 cp "$REPO_ROOT/deps/fmdb/src/FMDatabase."{m,h} "$META_DIR/deps/FMDB/"
 cp "$REPO_ROOT/deps/fmdb/src/FMResultSet."{m,h} "$META_DIR/deps/FMDB/"
+
+echo " > Copying vienna/Pods/ASIHTTPRequest/Classes/ (core files only)..."
+mkdir -p "$META_DIR/deps/ASIHTTPRequest"
+cp "$VIENNA_DIR/Pods/ASIHTTPRequest/Classes/"*.{m,h} "$META_DIR/deps/ASIHTTPRequest/" 2>/dev/null || true
 
 # Info.plist (3.0.8 keeps it in Resources/)
 cp "$VIENNA_DIR/Resources/Vienna-Info.plist" "$META_DIR/Info.plist"

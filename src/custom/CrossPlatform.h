@@ -119,3 +119,22 @@ enum { NSWindowCollectionBehaviorFullScreenPrimary = (1 << 7) };
 @interface NSObject (XP_WebOpenPanel)
 -(void)XP_chooseFilenames:(NSArray *)filenames;
 @end
+
+@interface NSBezierPath (XP_Compatibility)
++(NSBezierPath *)XP_bezierPathWithRoundedRect:(NSRect)rect xRadius:(CGFloat)xRadius yRadius:(CGFloat)yRadius;
+@end
+
+// Tiger (10.4): +[NSThread isMainThread] is 10.5+ only.
+// Implemented via pthread_main_np() which is available on Darwin since 10.4.
+@interface NSThread (XP_Compatibility)
++ (BOOL)isMainThread;
+@end
+
+// Tiger (10.4): NSObject performSelector:onThread:withObject:waitUntilDone: is 10.5+ only.
+// We implement it using NSRunLoop performSelector:target:argument:order:modes: + CFRunLoopWakeUp.
+// The target thread must have registered its NSRunLoop under the key @"_XPRunLoop" in its
+// threadDictionary before the first call (done by ASIHTTPRequest's +runRequests).
+@interface NSObject (XP_ThreadPerform)
+-(void)performSelector:(SEL)aSelector onThread:(NSThread *)thr withObject:(id)arg waitUntilDone:(BOOL)wait;
+-(void)performSelector:(SEL)aSelector onThread:(NSThread *)thr withObject:(id)arg waitUntilDone:(BOOL)wait modes:(NSArray *)array;
+@end

@@ -45,6 +45,15 @@
  	}
  	return self;
  }
+@@ -153,7 +171,7 @@
+ 	if (![fileManager fileExistsAtPath:databaseFolder isDirectory:&isDir])
+ 	{
+ 		NSError *error;
+-		if (![fileManager createDirectoryAtPath:databaseFolder withIntermediateDirectories:YES attributes:NULL error:&error])
++		if (![fileManager XP_createDirectoryAtPath:databaseFolder withIntermediateDirectories:YES attributes:NULL error:&error])
+ 		{
+ 			NSRunAlertPanel(NSLocalizedString(@"Cannot create database folder", nil),
+ 							[NSString stringWithFormat:NSLocalizedString(@"Cannot create database folder text: %@", nil), error],
 @@ -215,79 +233,79 @@
  			qualifiedDatabaseFileName = newPath;
  		}

@@ -1,0 +1,22 @@
+--- ASINetworkQueue.h
++++ ASINetworkQueue.h
+@@ -10,8 +10,17 @@
+ #import "ASIHTTPRequestDelegate.h"
+ #import "ASIProgressDelegate.h"
+ 
+-@interface ASINetworkQueue : NSOperationQueue <ASIProgressDelegate, ASIHTTPRequestDelegate, NSCopying> {
+-	
++// Tiger (10.4): NSOperationQueue is 10.5+ only. We manage our own pending/active
++// request arrays with NSLock, mirroring the approach in altivec/libs/ASICURLRequest.
++@interface ASINetworkQueue : NSObject <ASIProgressDelegate, ASIHTTPRequestDelegate, NSCopying> {
++
++	// Queue internals (Tiger-compatible, replaces NSOperationQueue)
++	NSMutableArray *pendingRequests_;
++	NSMutableArray *activeRequests_;
++	NSLock *lock_;
++	BOOL suspended_;
++	NSInteger maxConcurrentOperations_;
++
+ 	// Delegate will get didFail + didFinish messages (if set)
+ 	id delegate;
+ 

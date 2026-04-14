@@ -9,3 +9,21 @@
  
  // Initial paths
  NSString * MA_ApplicationSupportFolder = @"~/Library/Application Support/Vienna";
+@@ -128,7 +128,7 @@
+ 			if (![fileManager fileExistsAtPath:profilePath isDirectory:&isDir])
+ 			{
+ 				NSError * error;
+-				if (![fileManager createDirectoryAtPath:profilePath withIntermediateDirectories:YES attributes:NULL error:&error])
++				if (![fileManager XP_createDirectoryAtPath:profilePath withIntermediateDirectories:YES attributes:NULL error:&error])
+ 				{
+ 					NSLog(@"Cannot create profile folder %@: %@", profilePath, error);
+ 					[error release];
+@@ -1196,7 +1196,7 @@
+ 	if (![[NSFileManager defaultManager] fileExistsAtPath:feedSourcesFolder isDirectory:&isDirectory])
+ 	{
+ 		NSError * error = nil;
+-		if (![[NSFileManager defaultManager] createDirectoryAtPath:feedSourcesFolder withIntermediateDirectories:YES attributes:nil error:&error])
++		if (![[NSFileManager defaultManager] XP_createDirectoryAtPath:feedSourcesFolder withIntermediateDirectories:YES attributes:nil error:&error])
+ 		{
+ 			NSLog(@"Could not create feed sources folder at path '%@'. Error: %@", feedSourcesFolder, [error localizedDescription]);
+ 		}

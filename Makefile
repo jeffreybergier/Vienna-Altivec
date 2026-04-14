@@ -31,6 +31,7 @@ CURL_DIR      = $(CURDIR)/altivec/libs/libcurl/build-mac
 FMDB_DIR      = $(META_DIR)/deps/FMDB
 PXL_DIR       = $(META_DIR)/deps/PXListView
 MAS_DIR       = $(META_DIR)/deps/MASPreferences
+ASI_DIR       = $(META_DIR)/deps/ASIHTTPRequest
 THIRDPARTY_DIR = $(VIENNA_DIR)/3rdparty
 
 # --- Source File Lists ---
@@ -147,7 +148,17 @@ THIRDPARTY_SOURCES = \
 MAS_SOURCES = \
   MASPreferencesWindowController.m
 
-# (8) Custom — authored by us; compiled directly from src/custom/
+# (8) ASIHTTPRequest — staged from vienna/Pods/ASIHTTPRequest/Classes/ (core files, no S3/CloudFiles/WebPage)
+ASI_SOURCES = \
+  ASIHTTPRequest.m \
+  ASIFormDataRequest.m \
+  ASINetworkQueue.m \
+  ASIInputStream.m \
+  ASIDataCompressor.m \
+  ASIDataDecompressor.m \
+  ASIDownloadCache.m
+
+# (9) Custom — authored by us; compiled directly from src/custom/
 CUSTOM_SOURCES = \
   CrossPlatform.m \
   stubs.m
@@ -167,7 +178,7 @@ CFLAGS_BASE = $(OPT_FLAGS) \
   -I$(SRC_DIR)/custom \
   -I$(PSM_DIR) \
   -I$(CURDIR)/deps \
-  -I$(CURL_DIR)/include \
+  -I$(ASI_DIR) \
   -I$(FMDB_DIR) \
   -I$(PXL_DIR) \
   -I$(THIRDPARTY_DIR)/BJRVerticallyCenteredTextFieldCell \
@@ -186,18 +197,16 @@ OBJC_FLAGS = -fobjc-exceptions \
   -include $(SRC_DIR)/custom/CrossPlatform.h
 
 # --- Linking Flags ---
+# ASIHTTPRequest uses CFNetwork (native Mac HTTP stack) + zlib for compression.
+# libcurl/libssl/libcrypto will be re-added when ASIHTTPRequest is patched to
+# replace CFNetwork with libcurl in a future step.
 CURL_LIBS = \
-  $(CURL_DIR)/lib/libASICURLRequest.a \
-  $(CURL_DIR)/lib/libAICURLConnection.a \
-  $(CURL_DIR)/lib/libcurl.a \
-  $(CURL_DIR)/lib/libssl.a \
-  $(CURL_DIR)/lib/libcrypto.a \
   $(CURL_DIR)/lib/libz.a
 
 LDFLAGS_BASE = \
   -F$(META_DIR)/resources -F$(BUILD_DIR)/Frameworks \
   -framework AppKit -framework Foundation -framework WebKit \
-  -framework Carbon -framework Security -framework IOKit \
+  -framework Carbon -framework CoreServices -framework Security -framework IOKit \
   -framework SystemConfiguration -framework ApplicationServices \
   -framework AddressBook \
   $(CURL_LIBS) -lpthread -ldl -lobjc -ObjC -lgcc_s.10.4 \
@@ -211,18 +220,12 @@ LDFLAGS_PSM = \
 .PHONY: clean debug release package stage patches check
 
 check:
-	@if [ ! -f "$(CURL_DIR)/lib/libASICURLRequest.a" ]; then \
-		echo " [!] ERROR: ASICURLRequest not built."; \
-		echo "     Run: cd altivec/libs/libcurl && make -f Makefile-mac asicr"; \
-		exit 1; \
-	fi
-	@if [ ! -f "$(CURL_DIR)/lib/libAICURLConnection.a" ]; then \
-		echo " [!] ERROR: libcurl not built."; \
-		echo "     Run: cd altivec/libs/libcurl && make -f Makefile-mac aicc"; \
-		exit 1; \
-	fi
 	@if [ ! -f "$(META_DIR)/deps/sqlite/sqlite3.c" ]; then \
 		echo " [!] ERROR: sqlite not found in deps/sqlite/. Copy sqlite3.c and sqlite3.h there."; \
+		exit 1; \
+	fi
+	@if [ ! -f "$(ASI_DIR)/ASIHTTPRequest.m" ]; then \
+		echo " [!] ERROR: ASIHTTPRequest not staged. Run: make stage"; \
 		exit 1; \
 	fi
 
@@ -269,6 +272,9 @@ ifeq ($(filter package,$(MAKECMDGOALS)),package)
   PPC_MAS_OBJS     = $(addprefix $(BUILD_DIR)/obj/ppc/mas/, $(MAS_SOURCES:.m=.o))
   X86_MAS_OBJS     = $(addprefix $(BUILD_DIR)/obj/i386/mas/, $(MAS_SOURCES:.m=.o))
 
+  PPC_ASI_OBJS     = $(addprefix $(BUILD_DIR)/obj/ppc/asi/, $(ASI_SOURCES:.m=.o))
+  X86_ASI_OBJS     = $(addprefix $(BUILD_DIR)/obj/i386/asi/, $(ASI_SOURCES:.m=.o))
+
   PSM_SOURCES  := $(shell ls $(PSM_DIR)/*.m | grep -vE "Inspector|Integration|Plugin|Demo")
   PPC_PSM_OBJS := $(addprefix $(BUILD_DIR)/obj/ppc/psm/, $(notdir $(PSM_SOURCES:.m=.o)))
   X86_PSM_OBJS := $(addprefix $(BUILD_DIR)/obj/i386/psm/, $(notdir $(PSM_SOURCES:.m=.o)))
@@ -276,11 +282,11 @@ ifeq ($(filter package,$(MAKECMDGOALS)),package)
   PPC_ALL_OBJS = \
     $(PPC_VIENNA_OBJS) $(PPC_DEP_M_OBJS) $(PPC_DEP_C_OBJS) \
     $(PPC_FMDB_OBJS) $(PPC_PXL_OBJS) $(PPC_3RD_OBJS) \
-    $(PPC_MAS_OBJS) $(PPC_CUSTOM_OBJS)
+    $(PPC_MAS_OBJS) $(PPC_ASI_OBJS) $(PPC_CUSTOM_OBJS)
   X86_ALL_OBJS = \
     $(X86_VIENNA_OBJS) $(X86_DEP_M_OBJS) $(X86_DEP_C_OBJS) \
     $(X86_FMDB_OBJS) $(X86_PXL_OBJS) $(X86_3RD_OBJS) \
-    $(X86_MAS_OBJS) $(X86_CUSTOM_OBJS)
+    $(X86_MAS_OBJS) $(X86_ASI_OBJS) $(X86_CUSTOM_OBJS)
 
 endif
 
@@ -406,6 +412,23 @@ $(BUILD_DIR)/obj/i386/mas/%.o: $(MAS_DIR)/%.m
 	@echo "  > i386: mas/$(<F)"
 	@$(CC_X86) $(CFLAGS_BASE) $(OBJC_FLAGS) $(ARCH_X86) -c $< -o $@
 
+# ASIHTTPRequest sources (staged from vienna/Pods/ASIHTTPRequest/Classes/ — warnings suppressed, exceptions enabled)
+$(BUILD_DIR)/obj/ppc/asi/%.o: $(ASI_DIR)/%.m
+	@mkdir -p $(dir $@)
+	@echo "  > ppc: asi/$(<F)"
+	@$(CC_PPC) $(CFLAGS_BASE) -fobjc-exceptions \
+	  -include $(SRC_DIR)/custom/stubs.h \
+	  -include $(SRC_DIR)/custom/CrossPlatform.h \
+	  -w $(ARCH_PPC) -c $< -o $@
+
+$(BUILD_DIR)/obj/i386/asi/%.o: $(ASI_DIR)/%.m
+	@mkdir -p $(dir $@)
+	@echo "  > i386: asi/$(<F)"
+	@$(CC_X86) $(CFLAGS_BASE) -fobjc-exceptions \
+	  -include $(SRC_DIR)/custom/stubs.h \
+	  -include $(SRC_DIR)/custom/CrossPlatform.h \
+	  -w $(ARCH_X86) -c $< -o $@
+
 # Custom sources (from src/custom/)
 $(BUILD_DIR)/obj/ppc/custom/%.o: $(SRC_DIR)/custom/%.m
 	@mkdir -p $(dir $@)
@@ -460,5 +483,5 @@ $(BUNDLE): \
 	@for dir in $(shell find $(PSM_DIR) -maxdepth 1 -name "*.lproj" -type d); do \
 	  cp -R $$dir $(BUNDLE)/Contents/Resources/; \
 	done
-	@echo "  > copying cacert.pem"
-	@cp $(CURL_DIR)/lib/cacert.pem $(BUNDLE)/Contents/Resources/
+	@echo "  > copying cacert.pem (optional)"
+	@cp $(CURL_DIR)/lib/cacert.pem $(BUNDLE)/Contents/Resources/ 2>/dev/null || true
