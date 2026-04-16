@@ -48,12 +48,4 @@
 - (void)setFeedURL:(NSURL *)feedURL;
 @end
 
-// ---- 10.6+ stubs ----
-#if MAC_OS_X_VERSION_MAX_ALLOWED < 1060
-@protocol NSMenuDelegate <NSObject>
-@end
-@protocol NSTabViewDelegate <NSObject>
-@end
-#endif
-
 #endif

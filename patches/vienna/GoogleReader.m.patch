@@ -189,6 +189,15 @@
  }
  
  // callback
+@@ -463,7 +505,7 @@
+             {
+ 				// as described in http://code.google.com/p/google-reader-api/wiki/ItemId
+ 				// the short version of id is a base 10 signed integer ; the long version includes a 16 characters base 16 representation
+-                NSInteger shortId = [[itemRef objectForKey:@"id"] integerValue];
++                NSInteger shortId = [[itemRef objectForKey:@"id"] XP_integerValue];
+                 guid = [NSString stringWithFormat:@"tag:google.com,2005:reader/item/%016qx",(long long)shortId];
+             }
+ 
 @@ -471,9 +513,9 @@
  		}
  		LLog(@"%ld unread items for %@", [guidArray count], [request url]);
@@ -217,7 +226,15 @@
  
  	}
  	else //response status other than OK (200)
-@@ -533,9 +571,9 @@
+@@ -526,16 +564,16 @@
+             {
+ 				// as described in http://code.google.com/p/google-reader-api/wiki/ItemId
+ 				// the short version of id is a base 10 signed integer ; the long version includes a 16 characters base 16 representation
+-                NSInteger shortId = [[itemRef objectForKey:@"id"] integerValue];
++                NSInteger shortId = [[itemRef objectForKey:@"id"] XP_integerValue];
+                 guid = [NSString stringWithFormat:@"tag:google.com,2005:reader/item/%016qx",(long long)shortId];
+             }
+ 			[guidArray addObject:guid];
  		}
  		LLog(@"%ld starred items for %@", [guidArray count], [request url]);
  		Database * db = [Database sharedDatabase];
@@ -252,7 +269,7 @@
  						break;
  					}
  				}
-@@ -949,10 +987,10 @@
+@@ -949,14 +987,14 @@
      
      if (!folder)
      {
@@ -264,5 +281,11 @@
 -        }]; //end transaction block
 +        [db commitTransaction];
          
-         parentNumber = [NSNumber numberWithInteger:newFolderId];
+-        parentNumber = [NSNumber numberWithInteger:newFolderId];
++        parentNumber = [NSNumber XP_numberWithInteger:newFolderId];
      }
+-    else parentNumber = [NSNumber numberWithInteger:[folder itemId]];
++    else parentNumber = [NSNumber XP_numberWithInteger:[folder itemId]];
+     
+     [folderNames removeObjectAtIndex:0];
+     if ([folderNames count] > 0)

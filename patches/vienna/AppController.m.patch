@@ -234,6 +234,15 @@
  	}
  }
  
+@@ -4349,7 +4313,7 @@
+ 	else if (theAction == @selector(doSortDirection:))
+ 	{
+ 		NSNumber * ascendingNumber = [menuItem representedObject];
+-		BOOL ascending = [ascendingNumber integerValue];
++		BOOL ascending = [ascendingNumber XP_integerValue];
+ 		if (ascending == [articleController sortIsAscending])
+ 			[menuItem setState:NSOnState];
+ 		else
 @@ -4760,36 +4724,6 @@
  			 nil];
  }

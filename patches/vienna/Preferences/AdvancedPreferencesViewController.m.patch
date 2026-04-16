@@ -24,3 +24,11 @@
      // Do view setup here.
      [self initializePreferences];
  }
+@@ -102,6 +100,6 @@
+ 
+ 
+ -(IBAction)changeConcurrentDownloads:(id)sender {
+-    [[Preferences standardPreferences] setConcurrentDownloads:[[concurrentDownloads titleOfSelectedItem] integerValue]];
++    [[Preferences standardPreferences] setConcurrentDownloads:[[concurrentDownloads titleOfSelectedItem] XP_integerValue]];
+ }
+ @end

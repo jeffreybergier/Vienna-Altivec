@@ -372,30 +372,51 @@ BOOL createRecursiveDirectory(NSString * path)
 // The target thread must have stored [NSRunLoop currentRunLoop] under @"_XPRunLoop"
 // in its [[NSThread currentThread] threadDictionary] before the first call.
 @implementation NSObject (XP_ThreadPerform)
--(void)performSelector:(SEL)aSelector onThread:(NSThread *)thr withObject:(id)arg waitUntilDone:(BOOL)wait;
+-(void)XP_performSelector:(SEL)aSelector onThread:(NSThread *)thr withObject:(id)arg waitUntilDone:(BOOL)wait;
 {
+  SEL nat = @selector(performSelector:onThread:withObject:waitUntilDone:);
+  if ([self respondsToSelector:nat]) {
+    typedef void (*Fn)(id, SEL, SEL, NSThread *, id, BOOL);
+    ((Fn)[self methodForSelector:nat])(self, nat, aSelector, thr, arg, wait);
+    return;
+  }
+  // Tiger (10.4) fallback: use NSRunLoop dispatch.
   NSRunLoop *rl = [[thr threadDictionary] objectForKey:@"_XPRunLoop"];
   if (!rl) {
-    // Thread hasn't registered yet — fall back to dispatching on main thread.
     [self performSelectorOnMainThread:aSelector withObject:arg waitUntilDone:wait];
     return;
   }
   [rl performSelector:aSelector target:self argument:arg order:0
                 modes:[NSArray arrayWithObject:NSDefaultRunLoopMode]];
   CFRunLoopWakeUp([rl getCFRunLoop]);
-  // waitUntilDone:YES on background threads is not implemented — ASIHTTPRequest
-  // only ever passes NO for the network thread.
 }
--(void)performSelector:(SEL)aSelector onThread:(NSThread *)thr withObject:(id)arg waitUntilDone:(BOOL)wait modes:(NSArray *)array;
+-(void)XP_performSelector:(SEL)aSelector onThread:(NSThread *)thr withObject:(id)arg waitUntilDone:(BOOL)wait modes:(NSArray *)array;
 {
-  [self performSelector:aSelector onThread:thr withObject:arg waitUntilDone:wait];
+  [self XP_performSelector:aSelector onThread:thr withObject:arg waitUntilDone:wait];
+}
+@end
+
+@implementation NSTableColumn (XP_Compatibility)
+-(void)XP_setHidden:(BOOL)hidden {
+  if ([self respondsToSelector:@selector(setHidden:)])
+    [self setHidden:hidden];
+}
+-(BOOL)XP_isHidden {
+  if ([self respondsToSelector:@selector(isHidden)])
+    return [self isHidden];
+  return NO;
 }
 @end
 
 @implementation NSThread (XP_Compatibility)
-+ (BOOL)isMainThread {
++ (BOOL)XP_isMainThread {
   return pthread_main_np() != 0;
 }
+@end
+
+@implementation NSString (XP_IntegerValue)
+-(NSInteger)XP_integerValue { return (NSInteger)[self intValue]; }
+-(NSUInteger)XP_unsignedIntegerValue { return (NSUInteger)[self intValue]; }
 @end
 
 @implementation NSNumber (XP_Compatibility)
@@ -403,19 +424,15 @@ BOOL createRecursiveDirectory(NSString * path)
 {
 	return [NSNumber numberWithInt:(int)value];
 }
-+(NSNumber *)numberWithInteger:(NSInteger)value;
-{
-	return [NSNumber numberWithInt:(int)value];
-}
-+(NSNumber *)numberWithUnsignedInteger:(NSUInteger)value;
++(NSNumber *)XP_numberWithUnsignedInteger:(NSUInteger)value;
 {
 	return [NSNumber numberWithUnsignedInt:(unsigned int)value];
 }
--(NSInteger)integerValue;
+-(NSInteger)XP_integerValue;
 {
 	return (NSInteger)[self intValue];
 }
--(NSUInteger)unsignedIntegerValue;
+-(NSUInteger)XP_unsignedIntegerValue;
 {
 	return (NSUInteger)[self unsignedIntValue];
 }

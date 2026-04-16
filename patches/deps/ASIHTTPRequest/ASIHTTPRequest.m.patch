@@ -21,6 +21,33 @@
  
  	}
  }
+@@ -465,7 +466,7 @@
+ 		[requestRedirectedBlock release];
+ 		requestRedirectedBlock = nil;
+ 	}
+-	[[self class] performSelectorOnMainThread:@selector(releaseBlocks:) withObject:blocks waitUntilDone:[NSThread isMainThread]];
++	[[self class] performSelectorOnMainThread:@selector(releaseBlocks:) withObject:blocks waitUntilDone:[NSThread XP_isMainThread]];
+ }
+ // Always called on main thread
+ + (void)releaseBlocks:(NSArray *)blocks
+@@ -725,7 +726,7 @@
+ 
+ - (void)cancel
+ {
+-    [self performSelector:@selector(cancelOnRequestThread) onThread:[[self class] threadForRequest:self] withObject:nil waitUntilDone:NO];    
++    [self XP_performSelector:@selector(cancelOnRequestThread) onThread:[[self class] threadForRequest:self] withObject:nil waitUntilDone:NO];
+ }
+ 
+ - (void)clearDelegatesAndCancel
+@@ -810,7 +811,7 @@
+ - (void)start
+ {
+ 	[self setInProgress:YES];
+-	[self performSelector:@selector(main) onThread:[[self class] threadForRequest:self] withObject:nil waitUntilDone:NO];
++	[self XP_performSelector:@selector(main) onThread:[[self class] threadForRequest:self] withObject:nil waitUntilDone:NO];
+ }
+ 
+ - (void)startAsynchronous
 @@ -818,7 +819,8 @@
  #if DEBUG_REQUEST_STATUS || DEBUG_THROTTLING
  	ASI_DEBUG_LOG(@"[STATUS] Starting asynchronous request %@",self);
@@ -31,6 +58,136 @@
  }
  
  #pragma mark concurrency
+@@ -1135,7 +1137,7 @@
+ 		return;
+ 	}
+ 	
+-	[self performSelectorOnMainThread:@selector(requestStarted) withObject:nil waitUntilDone:[NSThread isMainThread]];
++	[self performSelectorOnMainThread:@selector(requestStarted) withObject:nil waitUntilDone:[NSThread XP_isMainThread]];
+ 	
+ 	[self setDownloadComplete:NO];
+ 	[self setComplete:NO];
+@@ -1473,7 +1475,7 @@
+ - (void)redirectToURL:(NSURL *)newURL
+ {
+ 	[self setRedirectURL:newURL];
+-	[self performSelector:@selector(performRedirect) onThread:[[self class] threadForRequest:self] withObject:nil waitUntilDone:NO];
++	[self XP_performSelector:@selector(performRedirect) onThread:[[self class] threadForRequest:self] withObject:nil waitUntilDone:NO];
+ }
+ 
+ - (BOOL)shouldTimeOut
+@@ -1835,7 +1837,7 @@
+ #if NS_BLOCKS_AVAILABLE
+ - (void)performBlockOnMainThread:(ASIBasicBlock)block
+ {
+-	[self performSelectorOnMainThread:@selector(callBlock:) withObject:[[block copy] autorelease] waitUntilDone:[NSThread isMainThread]];
++	[self performSelectorOnMainThread:@selector(callBlock:) withObject:[[block copy] autorelease] waitUntilDone:[NSThread XP_isMainThread]];
+ }
+ 
+ - (void)callBlock:(ASIBasicBlock)block
+@@ -1885,7 +1887,7 @@
+ 		if (callerToRetain) {
+ 			CFRetain(callerToRetain);
+ 		}
+-        [cbInvocation performSelectorOnMainThread:@selector(invoke) withObject:nil waitUntilDone:[NSThread isMainThread]];
++        [cbInvocation performSelectorOnMainThread:@selector(invoke) withObject:nil waitUntilDone:[NSThread XP_isMainThread]];
+     }
+ }
+ 
+@@ -2013,7 +2015,7 @@
+ 	if ([self isPACFileRequest]) {
+ 		[self reportFinished];
+ 	} else {
+-		[self performSelectorOnMainThread:@selector(reportFinished) withObject:nil waitUntilDone:[NSThread isMainThread]];
++		[self performSelectorOnMainThread:@selector(reportFinished) withObject:nil waitUntilDone:[NSThread XP_isMainThread]];
+ 	}
+ }
+ 
+@@ -2117,7 +2119,7 @@
+ 	if ([self isPACFileRequest]) {
+ 		[failedRequest reportFailure];
+ 	} else {
+-		[failedRequest performSelectorOnMainThread:@selector(reportFailure) withObject:nil waitUntilDone:[NSThread isMainThread]];
++		[failedRequest performSelectorOnMainThread:@selector(reportFailure) withObject:nil waitUntilDone:[NSThread XP_isMainThread]];
+ 	}
+ 	
+     if (!inProgress)
+@@ -2298,7 +2300,7 @@
+ 	}
+ 
+ 	CFRelease(message);
+-	[self performSelectorOnMainThread:@selector(requestReceivedResponseHeaders:) withObject:[[[self responseHeaders] copy] autorelease] waitUntilDone:[NSThread isMainThread]];
++	[self performSelectorOnMainThread:@selector(requestReceivedResponseHeaders:) withObject:[[[self responseHeaders] copy] autorelease] waitUntilDone:[NSThread XP_isMainThread]];
+ }
+ 
+ - (BOOL)willRedirect
+@@ -2314,7 +2316,7 @@
+ 		return NO;
+ 	}
+ 
+-	[self performSelectorOnMainThread:@selector(requestRedirected) withObject:nil waitUntilDone:[NSThread isMainThread]];
++	[self performSelectorOnMainThread:@selector(requestRedirected) withObject:nil waitUntilDone:[NSThread XP_isMainThread]];
+ 
+ 	// By default, we redirect 301 and 302 response codes as GET requests
+ 	// According to RFC 2616 this is wrong, but this is what most browsers do, so it's probably what you're expecting to happen
+@@ -2616,10 +2618,10 @@
+ 	#endif
+ 	//If the url was changed by the delegate, our CFHTTPMessageRef will be NULL and we'll go back to the start
+ 	if (!request) {
+-		[self performSelector:@selector(main) onThread:[[self class] threadForRequest:self] withObject:nil waitUntilDone:NO];
++		[self XP_performSelector:@selector(main) onThread:[[self class] threadForRequest:self] withObject:nil waitUntilDone:NO];
+ 		return;
+ 	}
+-	[self performSelector:@selector(attemptToApplyCredentialsAndResume) onThread:[[self class] threadForRequest:self] withObject:nil waitUntilDone:NO];
++	[self XP_performSelector:@selector(attemptToApplyCredentialsAndResume) onThread:[[self class] threadForRequest:self] withObject:nil waitUntilDone:NO];
+ }
+ 
+ // Called by delegate or authentication dialog to cancel authentication
+@@ -2628,7 +2630,7 @@
+ 	#if DEBUG_HTTP_AUTHENTICATION
+ 		ASI_DEBUG_LOG(@"[AUTH] Request %@ had authentication cancelled by its delegate or an ASIAuthenticationDialog",self);
+ 	#endif
+-	[self performSelector:@selector(failAuthentication) onThread:[[self class] threadForRequest:self] withObject:nil waitUntilDone:NO];
++	[self XP_performSelector:@selector(failAuthentication) onThread:[[self class] threadForRequest:self] withObject:nil waitUntilDone:NO];
+ }
+ 
+ - (void)failAuthentication
+@@ -2645,7 +2647,7 @@
+ 	// Mac authentication dialog coming soon!
+ 	#if TARGET_OS_IPHONE
+ 	if ([self shouldPresentProxyAuthenticationDialog]) {
+-		[ASIAuthenticationDialog performSelectorOnMainThread:@selector(presentAuthenticationDialogForRequest:) withObject:self waitUntilDone:[NSThread isMainThread]];
++		[ASIAuthenticationDialog performSelectorOnMainThread:@selector(presentAuthenticationDialogForRequest:) withObject:self waitUntilDone:[NSThread XP_isMainThread]];
+ 		return YES;
+ 	}
+ 	return NO;
+@@ -2920,7 +2922,7 @@
+ 	// Mac authentication dialog coming soon!
+ 	#if TARGET_OS_IPHONE
+ 	if ([self shouldPresentAuthenticationDialog]) {
+-		[ASIAuthenticationDialog performSelectorOnMainThread:@selector(presentAuthenticationDialogForRequest:) withObject:self waitUntilDone:[NSThread isMainThread]];
++		[ASIAuthenticationDialog performSelectorOnMainThread:@selector(presentAuthenticationDialogForRequest:) withObject:self waitUntilDone:[NSThread XP_isMainThread]];
+ 		return YES;
+ 	}
+ 	return NO;
+@@ -3234,7 +3236,7 @@
+ 	if (needToAskDelegateAboutRedirect) {
+ 		NSURL *newURL = [[[self redirectURL] copy] autorelease];
+ 		[self setRedirectURL:nil];
+-		[self performSelectorOnMainThread:@selector(requestWillRedirectToURL:) withObject:newURL waitUntilDone:[NSThread isMainThread]];
++		[self performSelectorOnMainThread:@selector(requestWillRedirectToURL:) withObject:newURL waitUntilDone:[NSThread XP_isMainThread]];
+ 		return true;
+ 	}
+ 	return false;
+@@ -3340,7 +3342,7 @@
+ 			} else {
+ 				data = [NSData dataWithBytes:buffer length:bytesRead];
+ 			}
+-			[self performSelectorOnMainThread:@selector(passOnReceivedData:) withObject:data waitUntilDone:[NSThread isMainThread]];
++			[self performSelectorOnMainThread:@selector(passOnReceivedData:) withObject:data waitUntilDone:[NSThread XP_isMainThread]];
+ 			
+ 		// Are we downloading to a file?
+ 		} else if ([self downloadDestinationPath]) {
 @@ -3650,17 +3652,24 @@
  - (void)handleStreamError
  
@@ -63,6 +220,15 @@
  			if ([self retryUsingNewConnection]) {
  				return;
  			}
+@@ -3730,7 +3739,7 @@
+ 			// This can prevent flicker when you have a single request finish and then immediately start another request
+ 			// We run this on the main thread because we have no guarantee this thread will have a runloop in 0.5 seconds time
+ 			// We don't bother the cancel this call if we start a new request, because we'll check if requests are running before we hide it
+-			[[self class] performSelectorOnMainThread:@selector(hideNetworkActivityIndicatorAfterDelay) withObject:nil waitUntilDone:[NSThread isMainThread]];
++			[[self class] performSelectorOnMainThread:@selector(hideNetworkActivityIndicatorAfterDelay) withObject:nil waitUntilDone:[NSThread XP_isMainThread]];
+ 		}
+ 		[connectionsLock unlock];
+ 
 @@ -3829,10 +3838,6 @@
  
  #if TARGET_OS_IPHONE

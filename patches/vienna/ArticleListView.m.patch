@@ -1,5 +1,14 @@
 --- vienna/ArticleListView.m
 +++ vienna/ArticleListView.m
+@@ -586,7 +586,7 @@
+     		if(columns && [columns count] > 0)
+     		{
+         		NSTableColumn *col = [columns objectAtIndex:[articleList columnWithIdentifier:identifier]];
+-              	[col setHidden:!showField];
++              	[col XP_setHidden:!showField];
+         	}
+     	}
+ 		// Add to the end only those columns that are visible
 @@ -1943,9 +1943,9 @@
  	if (pathToErrorPage != nil)
  	{

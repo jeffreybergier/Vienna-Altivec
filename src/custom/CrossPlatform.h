@@ -32,6 +32,8 @@ BOOL createRecursiveDirectory(NSString * path);
 @protocol NSURLConnectionDelegate @end
 @protocol NSURLConnectionDataDelegate @end
 @protocol NSAnimationDelegate @end
+@protocol NSMenuDelegate @end
+@protocol NSTabViewDelegate @end
 #endif
 
 // XPInteger: matches NSTableViewDataSource row parameter type across SDK versions.
@@ -58,6 +60,11 @@ BOOL createRecursiveDirectory(NSString * path);
 
 @interface NSEnumerator (XP_FastEnumeration)
 - (NSUInteger)countByEnumeratingWithState:(NSFastEnumerationState *)state objects:(id *)stackbuf count:(NSUInteger)len;
+@end
+
+@interface NSTableColumn (XP_Compatibility)
+-(void)XP_setHidden:(BOOL)hidden;
+-(BOOL)XP_isHidden;
 @end
 
 @interface NSCell (XP_Compatibility)
@@ -92,12 +99,18 @@ enum { NSWindowCollectionBehaviorFullScreenPrimary = (1 << 7) };
 -(NSString *)XP_stringByReplacingOccurrencesOfString:(NSString *)target withString:(NSString *)replacement options:(NSStringCompareOptions)options range:(NSRange)searchRange;
 @end
 
+// XP_integerValue / XP_unsignedIntegerValue live on both NSNumber and NSString
+// because callers may hold either type (JSON dicts return NSString, prefs return NSNumber).
 @interface NSNumber (XP_Compatibility)
 +(NSNumber *)XP_numberWithInteger:(NSInteger)value;
-+(NSNumber *)numberWithInteger:(NSInteger)value;
-+(NSNumber *)numberWithUnsignedInteger:(NSUInteger)value;
--(NSInteger)integerValue;
--(NSUInteger)unsignedIntegerValue;
++(NSNumber *)XP_numberWithUnsignedInteger:(NSUInteger)value;
+-(NSInteger)XP_integerValue;
+-(NSUInteger)XP_unsignedIntegerValue;
+@end
+
+@interface NSString (XP_IntegerValue)
+-(NSInteger)XP_integerValue;
+-(NSUInteger)XP_unsignedIntegerValue;
 @end
 
 @interface NSImage (XP_Compatibility)
@@ -127,7 +140,7 @@ enum { NSWindowCollectionBehaviorFullScreenPrimary = (1 << 7) };
 // Tiger (10.4): +[NSThread isMainThread] is 10.5+ only.
 // Implemented via pthread_main_np() which is available on Darwin since 10.4.
 @interface NSThread (XP_Compatibility)
-+ (BOOL)isMainThread;
++ (BOOL)XP_isMainThread;
 @end
 
 // Tiger (10.4): NSObject performSelector:onThread:withObject:waitUntilDone: is 10.5+ only.
@@ -135,6 +148,6 @@ enum { NSWindowCollectionBehaviorFullScreenPrimary = (1 << 7) };
 // The target thread must have registered its NSRunLoop under the key @"_XPRunLoop" in its
 // threadDictionary before the first call (done by ASIHTTPRequest's +runRequests).
 @interface NSObject (XP_ThreadPerform)
--(void)performSelector:(SEL)aSelector onThread:(NSThread *)thr withObject:(id)arg waitUntilDone:(BOOL)wait;
--(void)performSelector:(SEL)aSelector onThread:(NSThread *)thr withObject:(id)arg waitUntilDone:(BOOL)wait modes:(NSArray *)array;
+-(void)XP_performSelector:(SEL)aSelector onThread:(NSThread *)thr withObject:(id)arg waitUntilDone:(BOOL)wait;
+-(void)XP_performSelector:(SEL)aSelector onThread:(NSThread *)thr withObject:(id)arg waitUntilDone:(BOOL)wait modes:(NSArray *)array;
 @end
