@@ -125,6 +125,23 @@ enum { NSWindowCollectionBehaviorFullScreenPrimary = (1 << 7) };
 +(NSString *)XP_localizedStringFromDate:(NSDate *)date dateStyle:(NSDateFormatterStyle)dateStyle timeStyle:(NSDateFormatterStyle)timeStyle;
 @end
 
+// XPViewController: use NSViewController on 10.6+, custom subclass on Tiger.
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= 1060
+#define XPViewController NSViewController
+#else
+@interface XPViewController : NSResponder {
+@protected
+  NSView *_view;
+}
+- (id)initWithNibName:(NSString *)nibName bundle:(NSBundle *)bundle;
+- (NSView *)view;
+- (void)setView:(NSView *)view;
+- (void)loadView;
+- (void)viewWillAppear;
+- (BOOL)commitEditing;
+@end
+#endif
+
 @interface NSViewController (XP_Compatibility)
 -(void)viewWillAppear;
 @end

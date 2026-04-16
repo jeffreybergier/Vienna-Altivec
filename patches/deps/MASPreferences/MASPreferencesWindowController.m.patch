@@ -189,14 +189,19 @@
  
      NSString *origin = [[NSUserDefaults standardUserDefaults] stringForKey:kMASPreferencesFrameTopLeftKey];
      if (origin)
-@@ -92,7 +200,7 @@
+@@ -92,10 +200,10 @@
  }
  
  - (NSViewController <MASPreferencesViewController> *)firstViewController {
 -    for (id viewController in self.viewControllers)
+-        if ([viewController isKindOfClass:[NSViewController class]])
++    // Tiger: avoid [NSViewController class] — NULL class ref crashes on 10.4.
 +    for (id viewController in _viewControllers)
-         if ([viewController isKindOfClass:[NSViewController class]])
++        if ([viewController conformsToProtocol:@protocol(MASPreferencesViewController)])
              return viewController;
+-
+     return nil;
+ }
  
 @@ -104,7 +212,7 @@
  

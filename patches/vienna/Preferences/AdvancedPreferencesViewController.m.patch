@@ -24,7 +24,17 @@
      // Do view setup here.
      [self initializePreferences];
  }
-@@ -102,6 +100,6 @@
+@@ -50,7 +48,8 @@
+ 
+ - (NSImage *)toolbarItemImage
+ {
+-    return [NSImage imageNamed:NSImageNameAdvanced];
++    // NSImageNameAdvanced is 10.5+ and NULL on Tiger — use literal string
++    return [NSImage imageNamed:@"NSAdvanced"];
+ }
+ 
+ - (NSString *)toolbarItemLabel
+@@ -102,6 +101,6 @@
  
  
  -(IBAction)changeConcurrentDownloads:(id)sender {

@@ -18,6 +18,19 @@
  				{
  					NSLog(@"Cannot create profile folder %@: %@", profilePath, error);
  					[error release];
+@@ -269,10 +269,10 @@
+ 	NSData * defaultArticleListFont = [NSArchiver archivedDataWithRootObject:[NSFont fontWithName:@"LucidaGrande" size:11.0]];
+ 	NSData * defaultFolderFont = [NSArchiver archivedDataWithRootObject:[NSFont fontWithName:@"LucidaGrande" size:11.0]];
+ 	NSData * defaultArticleSortDescriptors = [NSArchiver archivedDataWithRootObject:[NSArray array]];
+-	
++
+ 	NSNumber * boolNo = [NSNumber numberWithBool:NO];
+ 	NSNumber * boolYes = [NSNumber numberWithBool:YES];
+-	
++
+ 	[defaultValues setObject:[MA_ApplicationSupportFolder stringByAppendingPathComponent:MA_Database_Name] forKey:MAPref_DefaultDatabase];
+ 	[defaultValues setObject:boolNo forKey:MAPref_CheckForUpdatedArticles];
+ 	[defaultValues setObject:boolYes forKey:MAPref_ShowUnreadArticlesInBold];
 @@ -281,13 +281,13 @@
  	[defaultValues setObject:boolYes forKey:MAPref_CheckForNewArticlesOnStartup];
  	[defaultValues setObject:[NSNumber numberWithInt:1] forKey:MAPref_CachedFolderID];
@@ -45,7 +58,7 @@
  	[defaultValues setObject:MA_DefaultDownloadsFolder forKey:MAPref_DownloadsFolder];
  	[defaultValues setObject:defaultArticleSortDescriptors forKey:MAPref_ArticleSortDescriptors];
  	[defaultValues setObject:[NSDate distantPast] forKey:MAPref_LastRefreshDate];
-@@ -313,7 +313,7 @@
+@@ -313,11 +313,11 @@
  	[defaultValues setObject:boolYes forKey:MAPref_ShouldSaveFeedSource];
  	[defaultValues setObject:boolNo forKey:MAPref_ShouldSaveFeedSourceBackup];
  	[defaultValues setObject:[NSKeyedArchiver archivedDataWithRootObject:[SearchMethod searchAllArticlesMethod]] forKey:MAPref_SearchMethod];
@@ -54,6 +67,11 @@
      [defaultValues setObject:boolNo forKey:MAPref_SyncGoogleReader];
      [defaultValues setObject:boolNo forKey:MAPref_GoogleNewSubscription];
      [defaultValues setObject:boolNo forKey:MAPref_AlwaysAcceptBetas];
+-	
++
+ 	return defaultValues;
+ }
+ 
 @@ -348,7 +348,7 @@
   */
  -(void)setInteger:(NSInteger)value forKey:(NSString *)defaultName

@@ -419,6 +419,39 @@ BOOL createRecursiveDirectory(NSString * path)
 -(NSUInteger)XP_unsignedIntegerValue { return (NSUInteger)[self intValue]; }
 @end
 
+#if MAC_OS_X_VERSION_MAX_ALLOWED < 1060
+@implementation XPViewController
+
+- (id)initWithNibName:(NSString *)nibName bundle:(NSBundle *)bundle {
+  (void)nibName; (void)bundle;
+  return [super init];
+}
+
+- (NSView *)view {
+  if (!_view) [self loadView];
+  return _view;
+}
+
+- (void)setView:(NSView *)view {
+  if (_view != view) {
+    [_view release];
+    _view = [view retain];
+  }
+}
+
+- (void)loadView {}
+- (void)viewWillAppear {}
+- (BOOL)commitEditing { return YES; }
+
+- (void)dealloc {
+  [_view release];
+  _view = nil;
+  [super dealloc];
+}
+
+@end
+#endif
+
 @implementation NSNumber (XP_Compatibility)
 +(NSNumber *)XP_numberWithInteger:(NSInteger)value;
 {

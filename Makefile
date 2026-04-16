@@ -163,6 +163,13 @@ CUSTOM_SOURCES = \
   CrossPlatform.m \
   stubs.m
 
+# (10) Nibs — programmatic view builders; compiled from src/nibs/
+NIB_SOURCES = \
+  GeneralPreferencesView.m \
+  AppearancePreferencesView.m \
+  SyncingPreferencesView.m \
+  AdvancedPreferencesView.m
+
 # --- Build Configuration ---
 BUILD_DIR ?= build
 BUNDLE = $(BUILD_DIR)/$(APP_NAME).app
@@ -269,6 +276,9 @@ ifeq ($(filter package,$(MAKECMDGOALS)),package)
   PPC_CUSTOM_OBJS  = $(addprefix $(BUILD_DIR)/obj/ppc/custom/, $(CUSTOM_SOURCES:.m=.o))
   X86_CUSTOM_OBJS  = $(addprefix $(BUILD_DIR)/obj/i386/custom/, $(CUSTOM_SOURCES:.m=.o))
 
+  PPC_NIB_OBJS     = $(addprefix $(BUILD_DIR)/obj/ppc/nibs/, $(NIB_SOURCES:.m=.o))
+  X86_NIB_OBJS     = $(addprefix $(BUILD_DIR)/obj/i386/nibs/, $(NIB_SOURCES:.m=.o))
+
   PPC_MAS_OBJS     = $(addprefix $(BUILD_DIR)/obj/ppc/mas/, $(MAS_SOURCES:.m=.o))
   X86_MAS_OBJS     = $(addprefix $(BUILD_DIR)/obj/i386/mas/, $(MAS_SOURCES:.m=.o))
 
@@ -282,11 +292,11 @@ ifeq ($(filter package,$(MAKECMDGOALS)),package)
   PPC_ALL_OBJS = \
     $(PPC_VIENNA_OBJS) $(PPC_DEP_M_OBJS) $(PPC_DEP_C_OBJS) \
     $(PPC_FMDB_OBJS) $(PPC_PXL_OBJS) $(PPC_3RD_OBJS) \
-    $(PPC_MAS_OBJS) $(PPC_ASI_OBJS) $(PPC_CUSTOM_OBJS)
+    $(PPC_MAS_OBJS) $(PPC_ASI_OBJS) $(PPC_CUSTOM_OBJS) $(PPC_NIB_OBJS)
   X86_ALL_OBJS = \
     $(X86_VIENNA_OBJS) $(X86_DEP_M_OBJS) $(X86_DEP_C_OBJS) \
     $(X86_FMDB_OBJS) $(X86_PXL_OBJS) $(X86_3RD_OBJS) \
-    $(X86_MAS_OBJS) $(X86_ASI_OBJS) $(X86_CUSTOM_OBJS)
+    $(X86_MAS_OBJS) $(X86_ASI_OBJS) $(X86_CUSTOM_OBJS) $(X86_NIB_OBJS)
 
 endif
 
@@ -438,6 +448,17 @@ $(BUILD_DIR)/obj/ppc/custom/%.o: $(SRC_DIR)/custom/%.m
 $(BUILD_DIR)/obj/i386/custom/%.o: $(SRC_DIR)/custom/%.m
 	@mkdir -p $(dir $@)
 	@echo "  > i386: $(<F)"
+	@$(CC_X86) $(CFLAGS_BASE) $(OBJC_FLAGS) $(ARCH_X86) -c $< -o $@
+
+# Nib sources (from src/nibs/)
+$(BUILD_DIR)/obj/ppc/nibs/%.o: $(SRC_DIR)/nibs/%.m
+	@mkdir -p $(dir $@)
+	@echo "  > ppc: nibs/$(<F)"
+	@$(CC_PPC) $(CFLAGS_BASE) $(OBJC_FLAGS) $(ARCH_PPC) -c $< -o $@
+
+$(BUILD_DIR)/obj/i386/nibs/%.o: $(SRC_DIR)/nibs/%.m
+	@mkdir -p $(dir $@)
+	@echo "  > i386: nibs/$(<F)"
 	@$(CC_X86) $(CFLAGS_BASE) $(OBJC_FLAGS) $(ARCH_X86) -c $< -o $@
 
 # PSM sources (from deps/PSMTabBarControl/)

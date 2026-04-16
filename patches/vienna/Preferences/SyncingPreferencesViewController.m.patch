@@ -9,7 +9,7 @@
  
  @end
  
-@@ -34,7 +36,7 @@
+@@ -34,14 +36,12 @@
  @synthesize syncButton;
  
  
@@ -18,3 +18,11 @@
      return [super initWithNibName:@"SyncingPreferencesView" bundle:nil];
  }
  
+ - (void)viewWillAppear {
+-    if([NSViewController instancesRespondToSelector:@selector(viewWillAppear)]) {
+-        [super viewWillAppear];
+-    }
++    [super viewWillAppear];
+     // Do view setup here.
+     sourcesDict = nil;
+     // Implement this method to handle any initialization after your window controller's window has been loaded from its nib file.

@@ -1,0 +1,11 @@
+--- vienna/Preferences/GeneralPreferencesViewController.h
++++ vienna/Preferences/GeneralPreferencesViewController.h
+@@ -20,7 +20,7 @@
+ 
+ #import "MASPreferencesViewController.h"
+ 
+-@interface GeneralPreferencesViewController : NSViewController <MASPreferencesViewController> {
++@interface GeneralPreferencesViewController : XPViewController <MASPreferencesViewController> {
+     IBOutlet NSPopUpButton * checkFrequency;
+     IBOutlet NSPopUpButton * linksHandler;
+     IBOutlet NSPopUpButton * expireDuration;
