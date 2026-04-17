@@ -1,0 +1,29 @@
+--- Vienna-Info.plist
++++ Vienna-Info.plist
+@@ -12,7 +12,7 @@
+ 				<string>viennastyle</string>
+ 			</array>
+ 			<key>CFBundleTypeIconFile</key>
+-			<string>vienna3style.icns</string>
++			<string>vienna2style.icns</string>
+ 			<key>CFBundleTypeName</key>
+ 			<string>Vienna Style Package</string>
+ 			<key>CFBundleTypeRole</key>
+@@ -26,7 +26,7 @@
+ 				<string>viennaplugin</string>
+ 			</array>
+ 			<key>CFBundleTypeIconFile</key>
+-			<string>vienna3plugin.icns</string>
++			<string>vienna2plugin.icns</string>
+ 			<key>LSHandlerRank</key>
+ 			<string>Default</string>
+ 			<key>CFBundleTypeName</key>
+@@ -60,7 +60,7 @@
+ 	<key>CFBundleHelpBookName</key>
+ 	<string>Vienna Help</string>
+ 	<key>CFBundleIconFile</key>
+-	<string>vienna-3.icns</string>
++	<string>vienna2.icns</string>
+ 	<key>CFBundleIdentifier</key>
+ 	<string>uk.co.opencommunity.vienna2</string>
+ 	<key>CFBundleInfoDictionaryVersion</key>

@@ -9,7 +9,8 @@
 #   clean      (standalone)
 #   check      (standalone)
 
-APP_NAME = Vienna
+APP_NAME    = Vienna
+APP_VERSION = 3.0.8 Altivec
 JOBS ?= 6
 
 # --- Toolchain ---
@@ -172,7 +173,8 @@ NIB_SOURCES = \
 
 # --- Build Configuration ---
 BUILD_DIR ?= build
-BUNDLE = $(BUILD_DIR)/$(APP_NAME).app
+INT_DIR    = $(BUILD_DIR)/Intermediates
+BUNDLE     = $(BUILD_DIR)/$(APP_NAME).app
 
 # --- Compilation Flags ---
 CFLAGS_BASE = $(OPT_FLAGS) \
@@ -259,38 +261,38 @@ release: check
 # --- Internal Build Logic ---
 ifeq ($(filter package,$(MAKECMDGOALS)),package)
 
-  PPC_VIENNA_OBJS  = $(addprefix $(BUILD_DIR)/obj/ppc/source/, $(VIENNA_SOURCES:.m=.o))
-  X86_VIENNA_OBJS  = $(addprefix $(BUILD_DIR)/obj/i386/source/, $(VIENNA_SOURCES:.m=.o))
+  PPC_VIENNA_OBJS  = $(addprefix $(INT_DIR)/obj/ppc/source/, $(VIENNA_SOURCES:.m=.o))
+  X86_VIENNA_OBJS  = $(addprefix $(INT_DIR)/obj/i386/source/, $(VIENNA_SOURCES:.m=.o))
 
-  PPC_DEP_M_OBJS   = $(addprefix $(BUILD_DIR)/obj/ppc/deps/, $(DEP_SOURCES_M:.m=.o))
-  X86_DEP_M_OBJS   = $(addprefix $(BUILD_DIR)/obj/i386/deps/, $(DEP_SOURCES_M:.m=.o))
-  PPC_DEP_C_OBJS   = $(addprefix $(BUILD_DIR)/obj/ppc/deps/, $(DEP_SOURCES_C:.c=.o))
-  X86_DEP_C_OBJS   = $(addprefix $(BUILD_DIR)/obj/i386/deps/, $(DEP_SOURCES_C:.c=.o))
+  PPC_DEP_M_OBJS   = $(addprefix $(INT_DIR)/obj/ppc/deps/, $(DEP_SOURCES_M:.m=.o))
+  X86_DEP_M_OBJS   = $(addprefix $(INT_DIR)/obj/i386/deps/, $(DEP_SOURCES_M:.m=.o))
+  PPC_DEP_C_OBJS   = $(addprefix $(INT_DIR)/obj/ppc/deps/, $(DEP_SOURCES_C:.c=.o))
+  X86_DEP_C_OBJS   = $(addprefix $(INT_DIR)/obj/i386/deps/, $(DEP_SOURCES_C:.c=.o))
 
-  PPC_FMDB_OBJS    = $(addprefix $(BUILD_DIR)/obj/ppc/fmdb/, $(FMDB_SOURCES:.m=.o))
-  X86_FMDB_OBJS    = $(addprefix $(BUILD_DIR)/obj/i386/fmdb/, $(FMDB_SOURCES:.m=.o))
+  PPC_FMDB_OBJS    = $(addprefix $(INT_DIR)/obj/ppc/fmdb/, $(FMDB_SOURCES:.m=.o))
+  X86_FMDB_OBJS    = $(addprefix $(INT_DIR)/obj/i386/fmdb/, $(FMDB_SOURCES:.m=.o))
 
-  PPC_PXL_OBJS     = $(addprefix $(BUILD_DIR)/obj/ppc/pxl/, $(PXL_SOURCES:.m=.o))
-  X86_PXL_OBJS     = $(addprefix $(BUILD_DIR)/obj/i386/pxl/, $(PXL_SOURCES:.m=.o))
+  PPC_PXL_OBJS     = $(addprefix $(INT_DIR)/obj/ppc/pxl/, $(PXL_SOURCES:.m=.o))
+  X86_PXL_OBJS     = $(addprefix $(INT_DIR)/obj/i386/pxl/, $(PXL_SOURCES:.m=.o))
 
-  PPC_3RD_OBJS     = $(addprefix $(BUILD_DIR)/obj/ppc/3rdparty/, $(THIRDPARTY_SOURCES:.m=.o))
-  X86_3RD_OBJS     = $(addprefix $(BUILD_DIR)/obj/i386/3rdparty/, $(THIRDPARTY_SOURCES:.m=.o))
+  PPC_3RD_OBJS     = $(addprefix $(INT_DIR)/obj/ppc/3rdparty/, $(THIRDPARTY_SOURCES:.m=.o))
+  X86_3RD_OBJS     = $(addprefix $(INT_DIR)/obj/i386/3rdparty/, $(THIRDPARTY_SOURCES:.m=.o))
 
-  PPC_CUSTOM_OBJS  = $(addprefix $(BUILD_DIR)/obj/ppc/custom/, $(CUSTOM_SOURCES:.m=.o))
-  X86_CUSTOM_OBJS  = $(addprefix $(BUILD_DIR)/obj/i386/custom/, $(CUSTOM_SOURCES:.m=.o))
+  PPC_CUSTOM_OBJS  = $(addprefix $(INT_DIR)/obj/ppc/custom/, $(CUSTOM_SOURCES:.m=.o))
+  X86_CUSTOM_OBJS  = $(addprefix $(INT_DIR)/obj/i386/custom/, $(CUSTOM_SOURCES:.m=.o))
 
-  PPC_NIB_OBJS     = $(addprefix $(BUILD_DIR)/obj/ppc/nibs/, $(NIB_SOURCES:.m=.o))
-  X86_NIB_OBJS     = $(addprefix $(BUILD_DIR)/obj/i386/nibs/, $(NIB_SOURCES:.m=.o))
+  PPC_NIB_OBJS     = $(addprefix $(INT_DIR)/obj/ppc/nibs/, $(NIB_SOURCES:.m=.o))
+  X86_NIB_OBJS     = $(addprefix $(INT_DIR)/obj/i386/nibs/, $(NIB_SOURCES:.m=.o))
 
-  PPC_MAS_OBJS     = $(addprefix $(BUILD_DIR)/obj/ppc/mas/, $(MAS_SOURCES:.m=.o))
-  X86_MAS_OBJS     = $(addprefix $(BUILD_DIR)/obj/i386/mas/, $(MAS_SOURCES:.m=.o))
+  PPC_MAS_OBJS     = $(addprefix $(INT_DIR)/obj/ppc/mas/, $(MAS_SOURCES:.m=.o))
+  X86_MAS_OBJS     = $(addprefix $(INT_DIR)/obj/i386/mas/, $(MAS_SOURCES:.m=.o))
 
-  PPC_ASI_OBJS     = $(addprefix $(BUILD_DIR)/obj/ppc/asi/, $(ASI_SOURCES:.m=.o))
-  X86_ASI_OBJS     = $(addprefix $(BUILD_DIR)/obj/i386/asi/, $(ASI_SOURCES:.m=.o))
+  PPC_ASI_OBJS     = $(addprefix $(INT_DIR)/obj/ppc/asi/, $(ASI_SOURCES:.m=.o))
+  X86_ASI_OBJS     = $(addprefix $(INT_DIR)/obj/i386/asi/, $(ASI_SOURCES:.m=.o))
 
   PSM_SOURCES  := $(shell ls $(PSM_DIR)/*.m | grep -vE "Inspector|Integration|Plugin|Demo")
-  PPC_PSM_OBJS := $(addprefix $(BUILD_DIR)/obj/ppc/psm/, $(notdir $(PSM_SOURCES:.m=.o)))
-  X86_PSM_OBJS := $(addprefix $(BUILD_DIR)/obj/i386/psm/, $(notdir $(PSM_SOURCES:.m=.o)))
+  PPC_PSM_OBJS := $(addprefix $(INT_DIR)/obj/ppc/psm/, $(notdir $(PSM_SOURCES:.m=.o)))
+  X86_PSM_OBJS := $(addprefix $(INT_DIR)/obj/i386/psm/, $(notdir $(PSM_SOURCES:.m=.o)))
 
   PPC_ALL_OBJS = \
     $(PPC_VIENNA_OBJS) $(PPC_DEP_M_OBJS) $(PPC_DEP_C_OBJS) \
@@ -311,35 +313,35 @@ clean:
 	rm -rf build build-debug build-release
 
 # --- Linking ---
-$(BUNDLE)/Contents/MacOS/$(APP_NAME): $(BUILD_DIR)/ppc.bin $(BUILD_DIR)/i386.bin
+$(BUNDLE)/Contents/MacOS/$(APP_NAME): $(INT_DIR)/ppc.bin $(INT_DIR)/i386.bin
 	@mkdir -p $(dir $@)
 	@echo " [5/6] Merging fat binary..."
 	@$(LIPO) -create $^ -output $@
 
-$(BUILD_DIR)/ppc.bin: $(PPC_ALL_OBJS) $(BUILD_DIR)/ppc/PSMTabBarControl.dylib
+$(INT_DIR)/ppc.bin: $(PPC_ALL_OBJS) $(INT_DIR)/ppc/PSMTabBarControl.dylib
 	@echo " [3/6] Linking ppc slice..."
 	@$(CC_PPC) $(ARCH_PPC) $(filter %.o, $^) \
-	  $(BUILD_DIR)/ppc/PSMTabBarControl.dylib $(LDFLAGS_BASE) -o $@
+	  $(INT_DIR)/ppc/PSMTabBarControl.dylib $(LDFLAGS_BASE) -o $@
 
-$(BUILD_DIR)/i386.bin: $(X86_ALL_OBJS) $(BUILD_DIR)/i386/PSMTabBarControl.dylib
+$(INT_DIR)/i386.bin: $(X86_ALL_OBJS) $(INT_DIR)/i386/PSMTabBarControl.dylib
 	@echo " [3/6] Linking i386 slice..."
 	@$(CC_X86) $(ARCH_X86) $(filter %.o, $^) \
-	  $(BUILD_DIR)/i386/PSMTabBarControl.dylib $(LDFLAGS_BASE) -o $@
+	  $(INT_DIR)/i386/PSMTabBarControl.dylib $(LDFLAGS_BASE) -o $@
 
 # --- PSM Framework ---
 $(BUNDLE)/Contents/Frameworks/PSMTabBarControl.framework/PSMTabBarControl: \
-    $(BUILD_DIR)/ppc/PSMTabBarControl.dylib $(BUILD_DIR)/i386/PSMTabBarControl.dylib
+    $(INT_DIR)/ppc/PSMTabBarControl.dylib $(INT_DIR)/i386/PSMTabBarControl.dylib
 	@mkdir -p $(dir $@)
 	@$(LIPO) -create $^ -output $@
 
-$(BUILD_DIR)/ppc/PSMTabBarControl.dylib: $(PPC_PSM_OBJS)
+$(INT_DIR)/ppc/PSMTabBarControl.dylib: $(PPC_PSM_OBJS)
 	@mkdir -p $(dir $@)
 	@echo "  > ppc: linking PSMTabBarControl"
 	@$(CC_PPC) -dynamiclib $(ARCH_PPC) \
 	  -install_name @executable_path/../Frameworks/PSMTabBarControl.framework/PSMTabBarControl \
 	  $(PPC_PSM_OBJS) $(LDFLAGS_PSM) -o $@
 
-$(BUILD_DIR)/i386/PSMTabBarControl.dylib: $(X86_PSM_OBJS)
+$(INT_DIR)/i386/PSMTabBarControl.dylib: $(X86_PSM_OBJS)
 	@mkdir -p $(dir $@)
 	@echo "  > i386: linking PSMTabBarControl"
 	@$(CC_X86) -dynamiclib $(ARCH_X86) \
@@ -349,84 +351,84 @@ $(BUILD_DIR)/i386/PSMTabBarControl.dylib: $(X86_PSM_OBJS)
 # --- Object Compilation Rules ---
 
 # Vienna sources (from build-stage/source/)
-$(BUILD_DIR)/obj/ppc/source/%.o: $(META_DIR)/source/%.m
+$(INT_DIR)/obj/ppc/source/%.o: $(META_DIR)/source/%.m
 	@mkdir -p $(dir $@)
 	@echo "  > ppc: $(<F)"
 	@$(CC_PPC) $(CFLAGS_BASE) $(OBJC_FLAGS) $(ARCH_PPC) -c $< -o $@
 
-$(BUILD_DIR)/obj/i386/source/%.o: $(META_DIR)/source/%.m
+$(INT_DIR)/obj/i386/source/%.o: $(META_DIR)/source/%.m
 	@mkdir -p $(dir $@)
 	@echo "  > i386: $(<F)"
 	@$(CC_X86) $(CFLAGS_BASE) $(OBJC_FLAGS) $(ARCH_X86) -c $< -o $@
 
 # Dep .m sources (no OBJC_FLAGS — third-party)
-$(BUILD_DIR)/obj/ppc/deps/%.o: $(META_DIR)/deps/%.m
+$(INT_DIR)/obj/ppc/deps/%.o: $(META_DIR)/deps/%.m
 	@mkdir -p $(dir $@)
 	@echo "  > ppc: $(<F)"
 	@$(CC_PPC) $(CFLAGS_BASE) $(ARCH_PPC) -c $< -o $@
 
-$(BUILD_DIR)/obj/i386/deps/%.o: $(META_DIR)/deps/%.m
+$(INT_DIR)/obj/i386/deps/%.o: $(META_DIR)/deps/%.m
 	@mkdir -p $(dir $@)
 	@echo "  > i386: $(<F)"
 	@$(CC_X86) $(CFLAGS_BASE) $(ARCH_X86) -c $< -o $@
 
 # Dep .c sources
-$(BUILD_DIR)/obj/ppc/deps/%.o: $(META_DIR)/deps/%.c
+$(INT_DIR)/obj/ppc/deps/%.o: $(META_DIR)/deps/%.c
 	@mkdir -p $(dir $@)
 	@echo "  > ppc: $(<F)"
 	@$(CC_PPC) $(CFLAGS_BASE) $(ARCH_PPC) -c $< -o $@
 
-$(BUILD_DIR)/obj/i386/deps/%.o: $(META_DIR)/deps/%.c
+$(INT_DIR)/obj/i386/deps/%.o: $(META_DIR)/deps/%.c
 	@mkdir -p $(dir $@)
 	@echo "  > i386: $(<F)"
 	@$(CC_X86) $(CFLAGS_BASE) $(ARCH_X86) -c $< -o $@
 
 # FMDB sources (from deps/fmdb/src/ — no OBJC_FLAGS, warnings suppressed)
-$(BUILD_DIR)/obj/ppc/fmdb/%.o: $(FMDB_DIR)/%.m
+$(INT_DIR)/obj/ppc/fmdb/%.o: $(FMDB_DIR)/%.m
 	@mkdir -p $(dir $@)
 	@echo "  > ppc: $(<F)"
 	@$(CC_PPC) $(CFLAGS_BASE) $(ARCH_PPC) -w -c $< -o $@
 
-$(BUILD_DIR)/obj/i386/fmdb/%.o: $(FMDB_DIR)/%.m
+$(INT_DIR)/obj/i386/fmdb/%.o: $(FMDB_DIR)/%.m
 	@mkdir -p $(dir $@)
 	@echo "  > i386: $(<F)"
 	@$(CC_X86) $(CFLAGS_BASE) $(ARCH_X86) -w -c $< -o $@
 
 # PXListView sources (from vienna/Pods/PXListView/Classes/ — inject Foundation)
-$(BUILD_DIR)/obj/ppc/pxl/%.o: $(PXL_DIR)/%.m
+$(INT_DIR)/obj/ppc/pxl/%.o: $(PXL_DIR)/%.m
 	@mkdir -p $(dir $@)
 	@echo "  > ppc: $(<F)"
 	@$(CC_PPC) $(CFLAGS_BASE) -include $(SRC_DIR)/custom/stubs.h $(ARCH_PPC) -c $< -o $@
 
-$(BUILD_DIR)/obj/i386/pxl/%.o: $(PXL_DIR)/%.m
+$(INT_DIR)/obj/i386/pxl/%.o: $(PXL_DIR)/%.m
 	@mkdir -p $(dir $@)
 	@echo "  > i386: $(<F)"
 	@$(CC_X86) $(CFLAGS_BASE) -include $(SRC_DIR)/custom/stubs.h $(ARCH_X86) -c $< -o $@
 
 # 3rdparty sources (from vienna/3rdparty/ — inject Foundation via stubs.h)
-$(BUILD_DIR)/obj/ppc/3rdparty/%.o: $(THIRDPARTY_DIR)/%.m
+$(INT_DIR)/obj/ppc/3rdparty/%.o: $(THIRDPARTY_DIR)/%.m
 	@mkdir -p $(dir $@)
 	@echo "  > ppc: $(<F)"
 	@$(CC_PPC) $(CFLAGS_BASE) -include $(SRC_DIR)/custom/stubs.h $(ARCH_PPC) -c $< -o $@
 
-$(BUILD_DIR)/obj/i386/3rdparty/%.o: $(THIRDPARTY_DIR)/%.m
+$(INT_DIR)/obj/i386/3rdparty/%.o: $(THIRDPARTY_DIR)/%.m
 	@mkdir -p $(dir $@)
 	@echo "  > i386: $(<F)"
 	@$(CC_X86) $(CFLAGS_BASE) -include $(SRC_DIR)/custom/stubs.h $(ARCH_X86) -c $< -o $@
 
 # MASPreferences sources (staged from vienna/Pods/MASPreferences/, patched)
-$(BUILD_DIR)/obj/ppc/mas/%.o: $(MAS_DIR)/%.m
+$(INT_DIR)/obj/ppc/mas/%.o: $(MAS_DIR)/%.m
 	@mkdir -p $(dir $@)
 	@echo "  > ppc: mas/$(<F)"
 	@$(CC_PPC) $(CFLAGS_BASE) $(OBJC_FLAGS) $(ARCH_PPC) -c $< -o $@
 
-$(BUILD_DIR)/obj/i386/mas/%.o: $(MAS_DIR)/%.m
+$(INT_DIR)/obj/i386/mas/%.o: $(MAS_DIR)/%.m
 	@mkdir -p $(dir $@)
 	@echo "  > i386: mas/$(<F)"
 	@$(CC_X86) $(CFLAGS_BASE) $(OBJC_FLAGS) $(ARCH_X86) -c $< -o $@
 
 # ASIHTTPRequest sources (staged from vienna/Pods/ASIHTTPRequest/Classes/ — warnings suppressed, exceptions enabled)
-$(BUILD_DIR)/obj/ppc/asi/%.o: $(ASI_DIR)/%.m
+$(INT_DIR)/obj/ppc/asi/%.o: $(ASI_DIR)/%.m
 	@mkdir -p $(dir $@)
 	@echo "  > ppc: asi/$(<F)"
 	@$(CC_PPC) $(CFLAGS_BASE) -fobjc-exceptions \
@@ -434,7 +436,7 @@ $(BUILD_DIR)/obj/ppc/asi/%.o: $(ASI_DIR)/%.m
 	  -include $(SRC_DIR)/custom/CrossPlatform.h \
 	  -w $(ARCH_PPC) -c $< -o $@
 
-$(BUILD_DIR)/obj/i386/asi/%.o: $(ASI_DIR)/%.m
+$(INT_DIR)/obj/i386/asi/%.o: $(ASI_DIR)/%.m
 	@mkdir -p $(dir $@)
 	@echo "  > i386: asi/$(<F)"
 	@$(CC_X86) $(CFLAGS_BASE) -fobjc-exceptions \
@@ -443,34 +445,34 @@ $(BUILD_DIR)/obj/i386/asi/%.o: $(ASI_DIR)/%.m
 	  -w $(ARCH_X86) -c $< -o $@
 
 # Custom sources (from src/custom/)
-$(BUILD_DIR)/obj/ppc/custom/%.o: $(SRC_DIR)/custom/%.m
+$(INT_DIR)/obj/ppc/custom/%.o: $(SRC_DIR)/custom/%.m
 	@mkdir -p $(dir $@)
 	@echo "  > ppc: $(<F)"
 	@$(CC_PPC) $(CFLAGS_BASE) $(OBJC_FLAGS) $(ARCH_PPC) -c $< -o $@
 
-$(BUILD_DIR)/obj/i386/custom/%.o: $(SRC_DIR)/custom/%.m
+$(INT_DIR)/obj/i386/custom/%.o: $(SRC_DIR)/custom/%.m
 	@mkdir -p $(dir $@)
 	@echo "  > i386: $(<F)"
 	@$(CC_X86) $(CFLAGS_BASE) $(OBJC_FLAGS) $(ARCH_X86) -c $< -o $@
 
 # Nib sources (from src/nibs/)
-$(BUILD_DIR)/obj/ppc/nibs/%.o: $(SRC_DIR)/nibs/%.m
+$(INT_DIR)/obj/ppc/nibs/%.o: $(SRC_DIR)/nibs/%.m
 	@mkdir -p $(dir $@)
 	@echo "  > ppc: nibs/$(<F)"
 	@$(CC_PPC) $(CFLAGS_BASE) $(OBJC_FLAGS) $(ARCH_PPC) -c $< -o $@
 
-$(BUILD_DIR)/obj/i386/nibs/%.o: $(SRC_DIR)/nibs/%.m
+$(INT_DIR)/obj/i386/nibs/%.o: $(SRC_DIR)/nibs/%.m
 	@mkdir -p $(dir $@)
 	@echo "  > i386: nibs/$(<F)"
 	@$(CC_X86) $(CFLAGS_BASE) $(OBJC_FLAGS) $(ARCH_X86) -c $< -o $@
 
 # PSM sources (from deps/PSMTabBarControl/)
-$(BUILD_DIR)/obj/ppc/psm/%.o: $(PSM_DIR)/%.m
+$(INT_DIR)/obj/ppc/psm/%.o: $(PSM_DIR)/%.m
 	@mkdir -p $(dir $@)
 	@echo "  > ppc: psm/$(<F)"
 	@$(CC_PPC) $(CFLAGS_BASE) $(OBJC_FLAGS) $(ARCH_PPC) -c $< -o $@
 
-$(BUILD_DIR)/obj/i386/psm/%.o: $(PSM_DIR)/%.m
+$(INT_DIR)/obj/i386/psm/%.o: $(PSM_DIR)/%.m
 	@mkdir -p $(dir $@)
 	@echo "  > i386: psm/$(<F)"
 	@$(CC_X86) $(CFLAGS_BASE) $(OBJC_FLAGS) $(ARCH_X86) -c $< -o $@
@@ -483,7 +485,12 @@ $(BUNDLE): \
 	@mkdir -p $(BUNDLE)/Contents/Resources
 	@mkdir -p $(BUNDLE)/Contents/SharedSupport/Styles
 	@mkdir -p $(BUNDLE)/Contents/SharedSupport/Scripts
-	@cp $(META_DIR)/Info.plist $(BUNDLE)/Contents/Info.plist
+	@sed -e 's/VCS_TAG :VCS_SHORT_HASH:/$(APP_VERSION)/g' \
+	     -e 's/VCS_TAG/$(APP_VERSION)/g' \
+	     -e 's/VCS_SHORT_HASH/$(APP_VERSION)/g' \
+	     -e 's/VCS_NUM/1/g' \
+	     -e 's/VCS_FULL_HASH/$(APP_VERSION)/g' \
+	     $(META_DIR)/Info.plist > $(BUNDLE)/Contents/Info.plist
 	@echo "APPL????" > $(BUNDLE)/Contents/PkgInfo
 	# Static resources (tiff, plist, icns, etc.)
 	@find $(META_DIR)/resources -maxdepth 1 \

@@ -18,17 +18,16 @@
      
      [self initializePreferences];
      
-@@ -65,7 +63,8 @@
+@@ -65,7 +63,7 @@
  
  - (NSImage *)toolbarItemImage
  {
 -    return [NSImage imageNamed:NSImageNamePreferencesGeneral];
-+    // NSImageNamePreferencesGeneral is 10.5+ and NULL on Tiger — use literal string
-+    return [NSImage imageNamed:@"NSPreferencesGeneral"];
++    return [NSImage imageNamed:@"generalPrefImage"];
  }
  
  - (NSString *)toolbarItemLabel
-@@ -282,22 +281,21 @@
+@@ -282,22 +280,21 @@
      [openPanel setCanChooseDirectories:YES];
      [openPanel setCanCreateDirectories:YES];
      [openPanel setCanChooseFiles:NO];
@@ -66,7 +65,7 @@
  }
  
  /* updateDownloadsPopUp
-@@ -358,20 +356,16 @@
+@@ -358,20 +355,16 @@
   */
  -(IBAction)handleLinkSelector:(id)sender
  {
@@ -96,7 +95,7 @@
  }
  
  /* setDefaultLinksHandler
-@@ -379,11 +373,14 @@
+@@ -379,11 +372,14 @@
   */
  -(void)setDefaultLinksHandler:(NSURL *)fileURLToNewHandler
  {

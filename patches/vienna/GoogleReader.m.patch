@@ -85,6 +85,15 @@
  	ActivityItem *aItem = [[request userInfo] objectForKey:@"log"];
  	Folder *refreshedFolder = [[request userInfo] objectForKey:@"folder"];
  	LLog(@"Refresh Done: %@",[refreshedFolder feedURL]);
+@@ -251,7 +296,7 @@
+ 		NSData *data = [request responseData];
+ 		NSDictionary * dict;
+ 		@synchronized(jsonDecoder) {
+-			dict = [[NSDictionary alloc] initWithDictionary:[jsonDecoder objectWithData:data]];
++			dict = [[NSDictionary alloc] initWithDictionary:[jsonDecoder parseJSONData:data]];
+ 		}
+ 		NSString *folderLastUpdateString = [[dict objectForKey:@"updated"] stringValue];
+ 		if ([folderLastUpdateString isEqualToString:@""] || [folderLastUpdateString isEqualToString:@"(null)"]) {
 @@ -331,59 +376,57 @@
  		}
  			
@@ -189,6 +198,15 @@
  }
  
  // callback
+@@ -449,7 +491,7 @@
+ 	@try {
+ 		NSArray * dict;
+ 		@synchronized(jsonDecoder) {
+-			dict =  (NSArray *)[[jsonDecoder objectWithData:[request responseData]]  objectForKey:@"itemRefs"];
++			dict =  (NSArray *)[[jsonDecoder parseJSONData:[request responseData]]  objectForKey:@"itemRefs"];
+ 		}
+ 		NSMutableArray * guidArray = [NSMutableArray arrayWithCapacity:[dict count]];
+ 		for (NSDictionary *itemRef in dict)
 @@ -463,7 +505,7 @@
              {
  				// as described in http://code.google.com/p/google-reader-api/wiki/ItemId
@@ -226,6 +244,15 @@
  
  	}
  	else //response status other than OK (200)
+@@ -512,7 +550,7 @@
+ 	@try {
+ 		NSArray * dict;
+ 		@synchronized(jsonDecoder) {
+-			dict =  (NSArray *)[[jsonDecoder objectWithData:[request responseData]]  objectForKey:@"itemRefs"];
++			dict =  (NSArray *)[[jsonDecoder parseJSONData:[request responseData]]  objectForKey:@"itemRefs"];
+ 		}
+ 		NSMutableArray * guidArray = [NSMutableArray arrayWithCapacity:[dict count]];
+ 		for (NSDictionary *itemRef in dict)
 @@ -526,16 +564,16 @@
              {
  				// as described in http://code.google.com/p/google-reader-api/wiki/ItemId
@@ -247,12 +274,21 @@
  		[refreshedFolder clearNonPersistedFlag:MA_FFlag_Updating];
  	} @catch (NSException *exception) {
  		[aItem appendDetail:[NSString stringWithFormat:@"%@ %@",NSLocalizedString(@"Error", nil),exception]];
+@@ -686,7 +724,7 @@
+ 	LLog(@"Ending subscriptionRequest");
+ 	NSDictionary * dict;
+ 	@synchronized(jsonDecoder) {
+-		dict = [jsonDecoder objectWithData:[request responseData]];
++		dict = [jsonDecoder parseJSONData:[request responseData]];
+ 	}
+ 	[localFeeds removeAllObjects];
+ 	NSArray * localFolders = [APPCONTROLLER folders];
 @@ -704,7 +742,7 @@
  		NSString * feedID = [feed objectForKey:@"id"];
  		if (feedID == nil)
  			break;
 -		NSString * feedURL = [feedID stringByReplacingOccurrencesOfString:@"feed/" withString:@"" options:0 range:NSMakeRange(0, 5)];
-+		NSString * feedURL = [feedID XM_stringByReplacingOccurrencesOfString:@"feed/" withString:@"" options:0 range:NSMakeRange(0, 5)];
++		NSString * feedURL = [feedID XP_stringByReplacingOccurrencesOfString:@"feed/" withString:@"" options:0 range:NSMakeRange(0, 5)];
  		if (![feedURL hasPrefix:@"http:"] && ![feedURL hasPrefix:@"https:"])
              feedURL = [NSString stringWithFormat:@"https://%@/reader/public/atom/%@", openReaderHost, feedURL];
  		

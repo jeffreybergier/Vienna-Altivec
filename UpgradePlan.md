@@ -275,6 +275,17 @@ Prebuilt `.a` libraries (libcurl, libssl, libcrypto, libz) live in
       to no-ops, but we haven't validated NTLM/Digest challenges against a real server.
 - [ ] Runtime smoke test on a true PPC Tiger / Leopard machine (current validation was
       against the x4-vm deploy target only).
+- [ ] Convert remaining NIBs to code (placed in `src/nibs/`, same pattern as preference panes).
+      Existing `.lproj` `.strings` files continue to work unchanged — `NSLocalizedString()`
+      is independent of whether the UI is nib-based or code-based.
+      NIBs to convert:
+      - `ActivityViewer.nib`
+      - `BrowserPane.nib`
+      - `Downloads.nib`
+      - `MainMenu.nib`
+      - `SearchPanel.nib`
+      - `XMLSource.nib`
+      - `English.lproj/PSMTabBarControlLibrary.nib` (PSMTabBarControl — may be avoidable)
 
 ---
 
