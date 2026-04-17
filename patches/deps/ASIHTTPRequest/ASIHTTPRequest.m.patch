@@ -1,6 +1,78 @@
 --- ASIHTTPRequest.m
 +++ ASIHTTPRequest.m
-@@ -135,7 +135,9 @@
+@@ -22,9 +22,10 @@
+ #import "ASIInputStream.h"
+ #import "ASIDataDecompressor.h"
+ #import "ASIDataCompressor.h"
++#import <curl/curl.h>
+ 
+ // Automatically set on build
+-NSString *ASIHTTPRequestVersion = @"v1.8.1-61 2011-09-19";
++NSString *ASIHTTPRequestVersion = @"v1.8.1-libcurl";
+ 
+ static NSString *defaultUserAgent = nil;
+ 
+@@ -32,8 +33,6 @@
+ 
+ static NSString *ASIHTTPRequestRunLoopMode = @"ASIHTTPRequestRunLoopMode";
+ 
+-static const CFOptionFlags kNetworkEvents =  kCFStreamEventHasBytesAvailable | kCFStreamEventEndEncountered | kCFStreamEventErrorOccurred;
+-
+ // In memory caches of credentials, used on when useSessionPersistence is YES
+ static NSMutableArray *sessionCredentialsStore = nil;
+ static NSMutableArray *sessionProxyCredentialsStore = nil;
+@@ -50,8 +49,48 @@
+ // The default number of seconds to use for a timeout
+ static NSTimeInterval defaultTimeOutSeconds = 10;
+ 
+-static void ReadStreamClientCallBack(CFReadStreamRef readStream, CFStreamEventType type, void *clientCallBackInfo) {
+-    [((ASIHTTPRequest*)clientCallBackInfo) handleNetworkEvent: type];
++// [libcurl callback] Body chunk received — append to an NSMutableData accumulator.
++// Runs on the detached curl worker thread.
++static size_t asi_curl_write_cb(void *ptr, size_t size, size_t nmemb, void *userp)
++{
++    size_t bytes = size * nmemb;
++    NSMutableData *buf = (NSMutableData *)userp;
++    [buf appendBytes:ptr length:bytes];
++    return bytes;
++}
++
++// [libcurl callback] Response header line ("Key: Value\r\n" or "HTTP/1.1 200 OK\r\n").
++// Parses into an NSMutableDictionary shared with the request. Status lines are ignored
++// (the status code is read via curl_easy_getinfo). Runs on the detached curl worker thread.
++static size_t asi_curl_header_cb(void *ptr, size_t size, size_t nmemb, void *userp)
++{
++    size_t bytes = size * nmemb;
++    NSMutableDictionary *headers = (NSMutableDictionary *)userp;
++    NSString *line = [[[NSString alloc] initWithBytes:ptr length:bytes encoding:NSUTF8StringEncoding] autorelease];
++    if (!line) { return bytes; }
++    // New response starts — clear previous headers (libcurl fires these on each redirect hop too)
++    if ([line hasPrefix:@"HTTP/"]) {
++        [headers removeAllObjects];
++        return bytes;
++    }
++    NSRange colon = [line rangeOfString:@":"];
++    if (colon.location == NSNotFound) { return bytes; }
++    NSString *key = [[line substringToIndex:colon.location]
++                     stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
++    NSString *val = [[line substringFromIndex:colon.location + 1]
++                     stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
++    if ([key length]) { [headers setObject:val forKey:key]; }
++    return bytes;
++}
++
++// [libcurl callback] Progress / cancellation check. Returns non-zero to abort the transfer.
++// Runs on the detached curl worker thread.
++static int asi_curl_xferinfo_cb(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow)
++{
++    ASIHTTPRequest *req = (ASIHTTPRequest *)clientp;
++    if ([req isCancelled]) { return 1; }
++    (void)dltotal; (void)dlnow; (void)ultotal; (void)ulnow;
++    return 0;
+ }
+ 
+ // This lock prevents the operation from being cancelled while it is trying to update the progress, and vice versa
+@@ -135,7 +174,9 @@
  // Hangs around forever, but will be blocked unless there are requests underway
  static NSThread *networkThread = nil;
  
@@ -11,7 +83,7 @@
  
  // Private stuff
  @interface ASIHTTPRequest ()
-@@ -269,8 +271,7 @@
+@@ -269,8 +310,7 @@
  		ASIRequestCancelledError = [[NSError alloc] initWithDomain:NetworkRequestErrorDomain code:ASIRequestCancelledErrorType userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"The request was cancelled",NSLocalizedDescriptionKey,nil]];
  		ASIUnableToCreateRequestError = [[NSError alloc] initWithDomain:NetworkRequestErrorDomain code:ASIUnableToCreateRequestErrorType userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Unable to create request (bad url?)",NSLocalizedDescriptionKey,nil]];
  		ASITooMuchRedirectionError = [[NSError alloc] initWithDomain:NetworkRequestErrorDomain code:ASITooMuchRedirectionErrorType userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"The request failed because it redirected too many times",NSLocalizedDescriptionKey,nil]];
@@ -21,7 +93,7 @@
  
  	}
  }
-@@ -465,7 +466,7 @@
+@@ -465,7 +505,7 @@
  		[requestRedirectedBlock release];
  		requestRedirectedBlock = nil;
  	}
@@ -30,7 +102,7 @@
  }
  // Always called on main thread
  + (void)releaseBlocks:(NSArray *)blocks
-@@ -725,7 +726,7 @@
+@@ -725,7 +765,7 @@
  
  - (void)cancel
  {
@@ -39,7 +111,7 @@
  }
  
  - (void)clearDelegatesAndCancel
-@@ -810,7 +811,7 @@
+@@ -810,7 +850,7 @@
  - (void)start
  {
  	[self setInProgress:YES];
@@ -48,7 +120,7 @@
  }
  
  - (void)startAsynchronous
-@@ -818,7 +819,8 @@
+@@ -818,7 +858,8 @@
  #if DEBUG_REQUEST_STATUS || DEBUG_THROTTLING
  	ASI_DEBUG_LOG(@"[STATUS] Starting asynchronous request %@",self);
  #endif
@@ -58,16 +130,525 @@
  }
  
  #pragma mark concurrency
-@@ -1135,7 +1137,7 @@
+@@ -891,17 +932,9 @@
+ 		}
+ 		
+ 		
+-		// If we're redirecting, we'll already have a CFHTTPMessageRef
+-		if (request) {
+-			CFRelease(request);
+-		}
+-
+-		// Create a new HTTP request.
+-		request = CFHTTPMessageCreateRequest(kCFAllocatorDefault, (CFStringRef)[self requestMethod], (CFURLRef)[self url], [self useHTTPVersionOne] ? kCFHTTPVersion1_0 : kCFHTTPVersion1_1);
+-		if (!request) {
+-			[self failWithError:ASIUnableToCreateRequestError];
+-			return;
+-		}
++		// CFHTTPMessageRef is no longer used — libcurl builds the wire request
++		// directly from url / method / headers / postBody. Request headers are
++		// accumulated into the requestHeaders dictionary instead.
+ 
+ 		//If this is a HEAD request generated by an ASINetworkQueue, we need to let the main request generate its headers first so we can use them
+ 		if ([self mainRequest]) {
+@@ -942,18 +975,11 @@
+ 		}
+ 
+ 		[self applyAuthorizationHeader];
+-		
+-		
+-		NSString *header;
+-		for (header in [self requestHeaders]) {
+-			CFHTTPMessageSetHeaderFieldValue(request, (CFStringRef)header, (CFStringRef)[[self requestHeaders] objectForKey:header]);
+-		}
+ 
+-		// If we immediately have access to proxy settings, start the request
+-		// Otherwise, we'll start downloading the proxy PAC file, and call startRequest once that process is complete
+-		if ([self configureProxies]) {
+-			[self startRequest];
+-		}
++		// libcurl consumes headers directly from [self requestHeaders] in startRequest.
++
++		// Proxies are not supported in the libcurl implementation — skip directly to startRequest.
++		[self startRequest];
+ 
+ 	} @catch (NSException *exception) {
+ 		NSError *underlyingError = [NSError errorWithDomain:NetworkRequestErrorDomain code:ASIUnhandledExceptionError userInfo:[exception userInfo]];
+@@ -1134,300 +1160,210 @@
+ 	if ([self isCancelled]) {
  		return;
  	}
- 	
+-	
 -	[self performSelectorOnMainThread:@selector(requestStarted) withObject:nil waitUntilDone:[NSThread isMainThread]];
+-	
++
 +	[self performSelectorOnMainThread:@selector(requestStarted) withObject:nil waitUntilDone:[NSThread XP_isMainThread]];
- 	
++
  	[self setDownloadComplete:NO];
  	[self setComplete:NO];
-@@ -1473,7 +1475,7 @@
+ 	[self setTotalBytesRead:0];
+ 	[self setLastBytesRead:0];
+-	
++
+ 	if ([self redirectCount] == 0) {
+ 		[self setOriginalURL:[self url]];
+ 	}
+-	
+-	// If we're retrying a request, let's remove any progress we made
+-	if ([self lastBytesSent] > 0) {
+-		[self removeUploadProgressSoFar];
+-	}
+-	
++
+ 	[self setLastBytesSent:0];
+ 	[self setContentLength:0];
+-	[self setResponseHeaders:nil];
+-	if (![self downloadDestinationPath]) {
+-		[self setRawResponseData:[[[NSMutableData alloc] init] autorelease]];
+-    }
+-	
+-	
+-    //
+-	// Create the stream for the request
+-	//
+-
+-	NSFileManager *fileManager = [[[NSFileManager alloc] init] autorelease];
++	[self setResponseHeaders:[NSMutableDictionary dictionary]];
++	[self setRawResponseData:[[[NSMutableData alloc] init] autorelease]];
+ 
+-	[self setReadStreamIsScheduled:NO];
+-	
+-	// Do we need to stream the request body from disk
+-	if ([self shouldStreamPostDataFromDisk] && [self postBodyFilePath] && [fileManager fileExistsAtPath:[self postBodyFilePath]]) {
+-		
+-		// Are we gzipping the request body?
+-		if ([self compressedPostBodyFilePath] && [fileManager fileExistsAtPath:[self compressedPostBodyFilePath]]) {
+-			[self setPostBodyReadStream:[ASIInputStream inputStreamWithFileAtPath:[self compressedPostBodyFilePath] request:self]];
+-		} else {
+-			[self setPostBodyReadStream:[ASIInputStream inputStreamWithFileAtPath:[self postBodyFilePath] request:self]];
+-		}
+-		[self setReadStream:[NSMakeCollectable(CFReadStreamCreateForStreamedHTTPRequest(kCFAllocatorDefault, request,(CFReadStreamRef)[self postBodyReadStream])) autorelease]];    
+-    } else {
+-		
+-		// If we have a request body, we'll stream it from memory using our custom stream, so that we can measure bandwidth use and it can be bandwidth-throttled if necessary
+-		if ([self postBody] && [[self postBody] length] > 0) {
+-			if ([self shouldCompressRequestBody] && [self compressedPostBody]) {
+-				[self setPostBodyReadStream:[ASIInputStream inputStreamWithData:[self compressedPostBody] request:self]];
+-			} else if ([self postBody]) {
+-				[self setPostBodyReadStream:[ASIInputStream inputStreamWithData:[self postBody] request:self]];
+-			}
+-			[self setReadStream:[NSMakeCollectable(CFReadStreamCreateForStreamedHTTPRequest(kCFAllocatorDefault, request,(CFReadStreamRef)[self postBodyReadStream])) autorelease]];
+-		
+-		} else {
+-			[self setReadStream:[NSMakeCollectable(CFReadStreamCreateForHTTPRequest(kCFAllocatorDefault, request)) autorelease]];
++	if (![self mainRequest]) {
++		if ([self shouldResetDownloadProgress] && ![self partialDownloadSize]) {
++			[ASIHTTPRequest updateProgressIndicator:&downloadProgressDelegate withProgress:0 ofTotal:1];
+ 		}
+ 	}
+ 
+-	if (![self readStream]) {
+-		[self failWithError:[NSError errorWithDomain:NetworkRequestErrorDomain code:ASIInternalErrorWhileBuildingRequestType userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Unable to create read stream",NSLocalizedDescriptionKey,nil]]];
+-        return;
+-    }
+-
++	[self setLastActivityTime:[NSDate date]];
+ 
+-    
+-    
+-    //
+-    // Handle SSL certificate settings
+-    //
+-
+-    if([[[[self url] scheme] lowercaseString] isEqualToString:@"https"]) {       
+-       
+-        // Tell CFNetwork not to validate SSL certificates
+-        if (![self validatesSecureCertificate]) {
+-            // see: http://iphonedevelopment.blogspot.com/2010/05/nsstream-tcp-and-ssl.html
+-            
+-            NSDictionary *sslProperties = [[NSDictionary alloc] initWithObjectsAndKeys:
+-                                      [NSNumber numberWithBool:YES], kCFStreamSSLAllowsExpiredCertificates,
+-                                      [NSNumber numberWithBool:YES], kCFStreamSSLAllowsAnyRoot,
+-                                      [NSNumber numberWithBool:NO],  kCFStreamSSLValidatesCertificateChain,
+-                                      kCFNull,kCFStreamSSLPeerName,
+-                                      nil];
+-            
+-            CFReadStreamSetProperty((CFReadStreamRef)[self readStream], 
+-                                    kCFStreamPropertySSLSettings, 
+-                                    (CFTypeRef)sslProperties);
+-            [sslProperties release];
+-        } 
+-        
+-        // Tell CFNetwork to use a client certificate
+-        if (clientCertificateIdentity) {
+-            NSMutableDictionary *sslProperties = [NSMutableDictionary dictionaryWithCapacity:1];
+-            
+-			NSMutableArray *certificates = [NSMutableArray arrayWithCapacity:[clientCertificates count]+1];
+-
+-			// The first object in the array is our SecIdentityRef
+-			[certificates addObject:(id)clientCertificateIdentity];
+-
+-			// If we've added any additional certificates, add them too
+-			for (id cert in clientCertificates) {
+-				[certificates addObject:cert];
+-			}
+-            
+-            [sslProperties setObject:certificates forKey:(NSString *)kCFStreamSSLCertificates];
+-            
+-            CFReadStreamSetProperty((CFReadStreamRef)[self readStream], kCFStreamPropertySSLSettings, sslProperties);
+-        }
+-        
+-    }
++	// Detach a worker thread to run curl_easy_perform. Events marshal back to
++	// the shared networkThread via XP_performSelector.
++	[NSThread detachNewThreadSelector:@selector(performCurlRequestOnWorker:)
++	                         toTarget:self
++	                       withObject:nil];
++}
+ 
+-	//
+-	// Handle proxy settings
+-	//
++// Runs on a detached thread — performs a single libcurl transfer.
++- (void)performCurlRequestOnWorker:(id)unused
++{
++	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+ 
+- 	if ([self proxyHost] && [self proxyPort]) {
+-		NSString *hostKey;
+-		NSString *portKey;
++	CURL *curl = curl_easy_init();
++	if (!curl) {
++		NSError *err = [NSError errorWithDomain:NetworkRequestErrorDomain
++		                                   code:ASIInternalErrorWhileBuildingRequestType
++		                               userInfo:[NSDictionary dictionaryWithObject:@"curl_easy_init failed"
++		                                                                    forKey:NSLocalizedDescriptionKey]];
++		[self XP_performSelector:@selector(handleCurlFailureWithError:)
++		                onThread:[[self class] threadForRequest:self]
++		              withObject:err
++		           waitUntilDone:NO];
++		[pool drain];
++		return;
++	}
+ 
+-		if (![self proxyType]) {
+-			[self setProxyType:(NSString *)kCFProxyTypeHTTP];
+-		}
++	NSMutableData *bodyBuf = [[[NSMutableData alloc] init] autorelease];
++	NSMutableDictionary *hdrBuf = [[[NSMutableDictionary alloc] init] autorelease];
+ 
+-		if ([[self proxyType] isEqualToString:(NSString *)kCFProxyTypeSOCKS]) {
+-			hostKey = (NSString *)kCFStreamPropertySOCKSProxyHost;
+-			portKey = (NSString *)kCFStreamPropertySOCKSProxyPort;
+-		} else {
+-			hostKey = (NSString *)kCFStreamPropertyHTTPProxyHost;
+-			portKey = (NSString *)kCFStreamPropertyHTTPProxyPort;
+-			if ([[[[self url] scheme] lowercaseString] isEqualToString:@"https"]) {
+-				hostKey = (NSString *)kCFStreamPropertyHTTPSProxyHost;
+-				portKey = (NSString *)kCFStreamPropertyHTTPSProxyPort;
+-			}
+-		}
+-		NSMutableDictionary *proxyToUse = [NSMutableDictionary dictionaryWithObjectsAndKeys:[self proxyHost],hostKey,[NSNumber numberWithInt:[self proxyPort]],portKey,nil];
++	curl_easy_setopt(curl, CURLOPT_URL, [[[self url] absoluteString] UTF8String]);
++	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
++	curl_easy_setopt(curl, CURLOPT_MAXREDIRS, (long)RedirectionLimit);
++	curl_easy_setopt(curl, CURLOPT_TIMEOUT, (long)[self timeOutSeconds]);
++	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
++	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 30L);
++
++	// Progress callback (used to poll for cancellation)
++	curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
++	curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, asi_curl_xferinfo_cb);
++	curl_easy_setopt(curl, CURLOPT_XFERINFODATA, self);
++
++	// TLS: use bundled CA bundle. validatesSecureCertificate=NO disables verification.
++	NSString *caPath = [[NSBundle mainBundle] pathForResource:@"cacert" ofType:@"pem"];
++	if (caPath) {
++		curl_easy_setopt(curl, CURLOPT_CAINFO, [caPath UTF8String]);
++	}
++	if (![self validatesSecureCertificate]) {
++		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
++		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
++	}
++
++	// Body + header callbacks
++	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, asi_curl_write_cb);
++	curl_easy_setopt(curl, CURLOPT_WRITEDATA, bodyBuf);
++	curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, asi_curl_header_cb);
++	curl_easy_setopt(curl, CURLOPT_HEADERDATA, hdrBuf);
++
++	// HTTP method
++	NSString *method = [self requestMethod];
++	if ([method isEqualToString:@"POST"]) {
++		curl_easy_setopt(curl, CURLOPT_POST, 1L);
++	} else if ([method isEqualToString:@"HEAD"]) {
++		curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
++	} else if (![method isEqualToString:@"GET"]) {
++		curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, [method UTF8String]);
++	}
++
++	// Request body (memory-resident only — streaming from disk not supported)
++	NSData *bodyToSend = ([self shouldCompressRequestBody] && [self compressedPostBody])
++		? [self compressedPostBody] : [self postBody];
++	if (bodyToSend && [bodyToSend length] > 0) {
++		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, [bodyToSend bytes]);
++		curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)[bodyToSend length]);
++	}
++
++	// User agent
++	if ([self userAgentString]) {
++		curl_easy_setopt(curl, CURLOPT_USERAGENT, [[self userAgentString] UTF8String]);
++	} else if (defaultUserAgent) {
++		curl_easy_setopt(curl, CURLOPT_USERAGENT, [defaultUserAgent UTF8String]);
++	}
++
++	// Basic auth — the only supported scheme. NTLM/Digest requests will fail with 401.
++	if ([self username] && [self password]) {
++		NSString *pair = [NSString stringWithFormat:@"%@:%@", [self username], [self password]];
++		curl_easy_setopt(curl, CURLOPT_USERPWD, [pair UTF8String]);
++		curl_easy_setopt(curl, CURLOPT_HTTPAUTH, (long)CURLAUTH_BASIC);
++	}
++
++	// Request headers
++	struct curl_slist *headerList = NULL;
++	NSEnumerator *keys = [[self requestHeaders] keyEnumerator];
++	NSString *k;
++	while ((k = [keys nextObject])) {
++		NSString *v = [[self requestHeaders] objectForKey:k];
++		NSString *line = [NSString stringWithFormat:@"%@: %@", k, v];
++		headerList = curl_slist_append(headerList, [line UTF8String]);
++	}
++	if (headerList) {
++		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerList);
++	}
++
++	CURLcode res = curl_easy_perform(curl);
++
++	long httpStatus = 0;
++	curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpStatus);
++	char *effectiveURL = NULL;
++	curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &effectiveURL);
++	NSString *finalURL = effectiveURL ? [NSString stringWithUTF8String:effectiveURL] : nil;
+ 
+-		if ([[self proxyType] isEqualToString:(NSString *)kCFProxyTypeSOCKS]) {
+-			CFReadStreamSetProperty((CFReadStreamRef)[self readStream], kCFStreamPropertySOCKSProxy, proxyToUse);
+-		} else {
+-			CFReadStreamSetProperty((CFReadStreamRef)[self readStream], kCFStreamPropertyHTTPProxy, proxyToUse);
+-		}
++	if (headerList) {
++		curl_slist_free_all(headerList);
+ 	}
++	curl_easy_cleanup(curl);
+ 
++	if ([self isCancelled] || res == CURLE_ABORTED_BY_CALLBACK) {
++		// Cancelled — no further notification needed; cancelOnRequestThread already handled it
++		[pool drain];
++		return;
++	}
+ 
+-	//
+-	// Handle persistent connections
+-	//
+-	
+-	[ASIHTTPRequest expirePersistentConnections];
+-
+-	[connectionsLock lock];
+-	
+-	
+-	if (![[self url] host] || ![[self url] scheme]) {
+-		[self setConnectionInfo:nil];
+-		[self setShouldAttemptPersistentConnection:NO];
++	if (res != CURLE_OK) {
++		int code = (res == CURLE_OPERATION_TIMEDOUT) ? ASIRequestTimedOutErrorType : ASIConnectionFailureErrorType;
++		NSString *msg = [NSString stringWithUTF8String:curl_easy_strerror(res)];
++		NSError *err = [NSError errorWithDomain:NetworkRequestErrorDomain
++		                                   code:code
++		                               userInfo:[NSDictionary dictionaryWithObject:msg forKey:NSLocalizedDescriptionKey]];
++		[self XP_performSelector:@selector(handleCurlFailureWithError:)
++		                onThread:[[self class] threadForRequest:self]
++		              withObject:err
++		           waitUntilDone:NO];
++		[pool drain];
++		return;
+ 	}
+-	
+-	// Will store the old stream that was using this connection (if there was one) so we can clean it up once we've opened our own stream
+-	NSInputStream *oldStream = nil;
+-	
+-	// Use a persistent connection if possible
+-	if ([self shouldAttemptPersistentConnection]) {
+-		
+ 
+-		// If we are redirecting, we will re-use the current connection only if we are connecting to the same server
+-		if ([self connectionInfo]) {
+-			
+-			if (![[[self connectionInfo] objectForKey:@"host"] isEqualToString:[[self url] host]] || ![[[self connectionInfo] objectForKey:@"scheme"] isEqualToString:[[self url] scheme]] || [(NSNumber *)[[self connectionInfo] objectForKey:@"port"] intValue] != [[[self url] port] intValue]) {
+-				[self setConnectionInfo:nil];
++	// Success — stash completion info and dispatch back to the network thread
++	NSMutableDictionary *info = [NSMutableDictionary dictionary];
++	[info setObject:bodyBuf forKey:@"body"];
++	[info setObject:hdrBuf forKey:@"headers"];
++	[info setObject:[NSNumber numberWithLong:httpStatus] forKey:@"status"];
++	if (finalURL) { [info setObject:finalURL forKey:@"url"]; }
++	[self XP_performSelector:@selector(handleCurlSuccessWithInfo:)
++	                onThread:[[self class] threadForRequest:self]
++	              withObject:info
++	           waitUntilDone:NO];
+ 
+-			// Check if we should have expired this connection
+-			} else if ([[[self connectionInfo] objectForKey:@"expires"] timeIntervalSinceNow] < 0) {
+-				#if DEBUG_PERSISTENT_CONNECTIONS
+-				ASI_DEBUG_LOG(@"[CONNECTION] Not re-using connection #%i because it has expired",[[[self connectionInfo] objectForKey:@"id"] intValue]);
+-				#endif
+-				[persistentConnectionsPool removeObject:[self connectionInfo]];
+-				[self setConnectionInfo:nil];
++	[pool drain];
++}
+ 
+-			} else if ([[self connectionInfo] objectForKey:@"request"] != nil) {
+-                //Some other request reused this connection already - we'll have to create a new one
+-				#if DEBUG_PERSISTENT_CONNECTIONS
+-                ASI_DEBUG_LOG(@"%@ - Not re-using connection #%i for request #%i because it is already used by request #%i",self,[[[self connectionInfo] objectForKey:@"id"] intValue],[[self requestID] intValue],[[[self connectionInfo] objectForKey:@"request"] intValue]);
+-				#endif
+-                [self setConnectionInfo:nil];
+-            }
+-		}
+-		
+-		
+-		
+-		if (![self connectionInfo] && [[self url] host] && [[self url] scheme]) { // We must have a proper url with a host and scheme, or this will explode
+-			
+-			// Look for a connection to the same server in the pool
+-			for (NSMutableDictionary *existingConnection in persistentConnectionsPool) {
+-				if (![existingConnection objectForKey:@"request"] && [[existingConnection objectForKey:@"host"] isEqualToString:[[self url] host]] && [[existingConnection objectForKey:@"scheme"] isEqualToString:[[self url] scheme]] && [(NSNumber *)[existingConnection objectForKey:@"port"] intValue] == [[[self url] port] intValue]) {
+-					[self setConnectionInfo:existingConnection];
+-				}
+-			}
+-		}
+-		
+-		if ([[self connectionInfo] objectForKey:@"stream"]) {
+-			oldStream = [[[self connectionInfo] objectForKey:@"stream"] retain];
++// Runs on the network thread — completes the request with the curl response.
++- (void)handleCurlSuccessWithInfo:(NSDictionary *)info
++{
++	if ([self isCancelled] || [self complete]) { return; }
+ 
+-		}
+-		
+-		// No free connection was found in the pool matching the server/scheme/port we're connecting to, we'll need to create a new one
+-		if (![self connectionInfo]) {
+-			[self setConnectionInfo:[NSMutableDictionary dictionary]];
+-			nextConnectionNumberToCreate++;
+-			[[self connectionInfo] setObject:[NSNumber numberWithInt:nextConnectionNumberToCreate] forKey:@"id"];
+-			[[self connectionInfo] setObject:[[self url] host] forKey:@"host"];
+-			[[self connectionInfo] setObject:[NSNumber numberWithInt:[[[self url] port] intValue]] forKey:@"port"];
+-			[[self connectionInfo] setObject:[[self url] scheme] forKey:@"scheme"];
+-			[persistentConnectionsPool addObject:[self connectionInfo]];
+-		}
+-		
+-		// If we are retrying this request, it will already have a requestID
+-		if (![self requestID]) {
+-			nextRequestID++;
+-			[self setRequestID:[NSNumber numberWithUnsignedInt:nextRequestID]];
+-		}
+-		[[self connectionInfo] setObject:[self requestID] forKey:@"request"];		
+-		[[self connectionInfo] setObject:[self readStream] forKey:@"stream"];
+-		CFReadStreamSetProperty((CFReadStreamRef)[self readStream],  kCFStreamPropertyHTTPAttemptPersistentConnection, kCFBooleanTrue);
+-		
+-		#if DEBUG_PERSISTENT_CONNECTIONS
+-		ASI_DEBUG_LOG(@"[CONNECTION] Request #%@ will use connection #%i",[self requestID],[[[self connectionInfo] objectForKey:@"id"] intValue]);
+-		#endif
+-		
+-		
+-		// Tag the stream with an id that tells it which connection to use behind the scenes
+-		// See http://lists.apple.com/archives/macnetworkprog/2008/Dec/msg00001.html for details on this approach
+-		
+-		CFReadStreamSetProperty((CFReadStreamRef)[self readStream], CFSTR("ASIStreamID"), [[self connectionInfo] objectForKey:@"id"]);
+-	
+-	} else {
+-		#if DEBUG_PERSISTENT_CONNECTIONS
+-		ASI_DEBUG_LOG(@"[CONNECTION] Request %@ will not use a persistent connection",self);
+-		#endif
+-	}
+-	
+-	[connectionsLock unlock];
++	NSMutableData *body = [info objectForKey:@"body"];
++	NSMutableDictionary *headers = [info objectForKey:@"headers"];
++	long status = [[info objectForKey:@"status"] longValue];
++	NSString *finalURL = [info objectForKey:@"url"];
+ 
+-	// Schedule the stream
+-	if (![self readStreamIsScheduled] && (!throttleWakeUpTime || [throttleWakeUpTime timeIntervalSinceDate:[NSDate date]] < 0)) {
+-		[self scheduleReadStream];
++	[self setResponseStatusCode:(int)status];
++	[self setResponseHeaders:headers];
++	[self setRawResponseData:body];
++	[self setContentLength:[body length]];
++	[self setTotalBytesRead:[body length]];
++	if (finalURL) {
++		NSURL *u = [NSURL URLWithString:finalURL];
++		if (u) { [self setURL:u]; }
+ 	}
+-	
+-	BOOL streamSuccessfullyOpened = NO;
+-
+ 
+-   // Start the HTTP connection
+-	CFStreamClientContext ctxt = {0, self, NULL, NULL, NULL};
+-    if (CFReadStreamSetClient((CFReadStreamRef)[self readStream], kNetworkEvents, ReadStreamClientCallBack, &ctxt)) {
+-		if (CFReadStreamOpen((CFReadStreamRef)[self readStream])) {
+-			streamSuccessfullyOpened = YES;
+-		}
+-	}
+-	
+-	// Here, we'll close the stream that was previously using this connection, if there was one
+-	// We've kept it open until now (when we've just opened a new stream) so that the new stream can make use of the old connection
+-	// http://lists.apple.com/archives/Macnetworkprog/2006/Mar/msg00119.html
+-	if (oldStream) {
+-		[oldStream close];
+-		[oldStream release];
+-		oldStream = nil;
+-	}
++	// Let the rest of the pipeline interpret the headers and finish the request.
++	[self readResponseHeaders];
++	[self handleStreamComplete];
++}
+ 
+-	if (!streamSuccessfullyOpened) {
+-		[self setConnectionCanBeReused:NO];
+-		[self destroyReadStream];
+-		[self failWithError:[NSError errorWithDomain:NetworkRequestErrorDomain code:ASIInternalErrorWhileBuildingRequestType userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Unable to start HTTP connection",NSLocalizedDescriptionKey,nil]]];
+-		return;	
+-	}
+-	
+-	if (![self mainRequest]) {
+-		if ([self shouldResetUploadProgress]) {
+-			if ([self showAccurateProgress]) {
+-				[self incrementUploadSizeBy:[self postLength]];
+-			} else {
+-				[self incrementUploadSizeBy:1];	 
+-			}
+-			[ASIHTTPRequest updateProgressIndicator:&uploadProgressDelegate withProgress:0 ofTotal:1];
+-		}
+-		if ([self shouldResetDownloadProgress] && ![self partialDownloadSize]) {
+-			[ASIHTTPRequest updateProgressIndicator:&downloadProgressDelegate withProgress:0 ofTotal:1];
+-		}
+-	}	
+-	
+-	
+-	// Record when the request started, so we can timeout if nothing happens
+-	[self setLastActivityTime:[NSDate date]];
+-	[self setStatusTimer:[NSTimer timerWithTimeInterval:0.25 target:self selector:@selector(updateStatus:) userInfo:nil repeats:YES]];
+-	[[NSRunLoop currentRunLoop] addTimer:[self statusTimer] forMode:[self runLoopMode]];
++// Runs on the network thread — completes the request with a libcurl error.
++- (void)handleCurlFailureWithError:(NSError *)err
++{
++	if ([self isCancelled] || [self complete]) { return; }
++	[self failWithError:err];
+ }
+ 
+ - (void)setStatusTimer:(NSTimer *)timer
+@@ -1473,7 +1409,7 @@
  - (void)redirectToURL:(NSURL *)newURL
  {
  	[self setRedirectURL:newURL];
@@ -76,7 +657,65 @@
  }
  
  - (BOOL)shouldTimeOut
-@@ -1835,7 +1837,7 @@
+@@ -1508,56 +1444,7 @@
+ 	
+ 	[self performThrottling];
+ 	
+-	if ([self shouldTimeOut]) {			
+-		// Do we need to auto-retry this request?
+-		if ([self numberOfTimesToRetryOnTimeout] > [self retryCount]) {
+-
+-			// If we are resuming a download, we may need to update the Range header to take account of data we've just downloaded
+-			[self updatePartialDownloadSize];
+-			if ([self partialDownloadSize]) {
+-				CFHTTPMessageSetHeaderFieldValue(request, (CFStringRef)@"Range", (CFStringRef)[NSString stringWithFormat:@"bytes=%llu-",[self partialDownloadSize]]);
+-			}
+-			[self setRetryCount:[self retryCount]+1];
+-			[self unscheduleReadStream];
+-			[[self cancelledLock] unlock];
+-			[self startRequest];
+-			return;
+-		}
+-		[self failWithError:ASIRequestTimedOutError];
+-		[self cancelLoad];
+-		[self setComplete:YES];
+-		[[self cancelledLock] unlock];
+-		return;
+-	}
+-
+-	// readStream will be null if we aren't currently running (perhaps we're waiting for a delegate to supply credentials)
+-	if ([self readStream]) {
+-		
+-		// If we have a post body
+-		if ([self postLength]) {
+-		
+-			[self setLastBytesSent:totalBytesSent];	
+-			
+-			// Find out how much data we've uploaded so far
+-			[self setTotalBytesSent:[[NSMakeCollectable(CFReadStreamCopyProperty((CFReadStreamRef)[self readStream], kCFStreamPropertyHTTPRequestBytesWrittenCount)) autorelease] unsignedLongLongValue]];
+-			if (totalBytesSent > lastBytesSent) {
+-				
+-				// We've uploaded more data,  reset the timeout
+-				[self setLastActivityTime:[NSDate date]];
+-				[ASIHTTPRequest incrementBandwidthUsedInLastSecond:(unsigned long)(totalBytesSent-lastBytesSent)];		
+-						
+-				#if DEBUG_REQUEST_STATUS
+-				if ([self totalBytesSent] == [self postLength]) {
+-					ASI_DEBUG_LOG(@"[STATUS] Request %@ finished uploading data",self);
+-				}
+-				#endif
+-			}
+-		}
+-			
+-		[self updateProgressIndicators];
+-
+-	}
+-	
++	// Timeouts are handled natively by libcurl (CURLOPT_TIMEOUT) — nothing to poll here.
+ 	[[self cancelledLock] unlock];
+ }
+ 
+@@ -1835,7 +1722,7 @@
  #if NS_BLOCKS_AVAILABLE
  - (void)performBlockOnMainThread:(ASIBasicBlock)block
  {
@@ -85,7 +724,7 @@
  }
  
  - (void)callBlock:(ASIBasicBlock)block
-@@ -1885,7 +1887,7 @@
+@@ -1885,7 +1772,7 @@
  		if (callerToRetain) {
  			CFRetain(callerToRetain);
  		}
@@ -94,7 +733,7 @@
      }
  }
  
-@@ -2013,7 +2015,7 @@
+@@ -2013,7 +1900,7 @@
  	if ([self isPACFileRequest]) {
  		[self reportFinished];
  	} else {
@@ -103,7 +742,7 @@
  	}
  }
  
-@@ -2117,7 +2119,7 @@
+@@ -2117,7 +2004,7 @@
  	if ([self isPACFileRequest]) {
  		[failedRequest reportFailure];
  	} else {
@@ -112,16 +751,103 @@
  	}
  	
      if (!inProgress)
-@@ -2298,7 +2300,7 @@
+@@ -2135,27 +2022,12 @@
+ {
+ 	[self setAuthenticationNeeded:ASINoAuthenticationNeededYet];
+ 
+-	CFHTTPMessageRef message = (CFHTTPMessageRef)CFReadStreamCopyProperty((CFReadStreamRef)[self readStream], kCFStreamPropertyHTTPResponseHeader);
+-	if (!message) {
+-		return;
+-	}
+-	
+-	// Make sure we've received all the headers
+-	if (!CFHTTPMessageIsHeaderComplete(message)) {
+-		CFRelease(message);
++	// libcurl already populated responseHeaders and responseStatusCode; nothing to parse.
++	// If headers are missing, bail (worker thread hasn't delivered them yet).
++	if (![self responseHeaders]) {
+ 		return;
  	}
  
- 	CFRelease(message);
+-	#if DEBUG_REQUEST_STATUS
+-	if ([self totalBytesSent] == [self postLength]) {
+-		ASI_DEBUG_LOG(@"[STATUS] Request %@ received response headers",self);
+-	}
+-	#endif		
+-
+-	[self setResponseHeaders:[NSMakeCollectable(CFHTTPMessageCopyAllHeaderFields(message)) autorelease]];
+-	[self setResponseStatusCode:(int)CFHTTPMessageGetResponseStatusCode(message)];
+-	[self setResponseStatusMessage:[NSMakeCollectable(CFHTTPMessageCopyResponseStatusLine(message)) autorelease]];
+-
+ 	if ([self downloadCache] && ([[self downloadCache] canUseCachedDataForRequest:self])) {
+ 
+ 		// Update the expiry date
+@@ -2163,8 +2035,6 @@
+ 
+ 		// Read the response from the cache
+ 		[self useDataFromCache];
+-
+-		CFRelease(message);
+ 		return;
+ 	}
+ 
+@@ -2253,52 +2123,10 @@
+ 		}
+ 	}
+ 
+-	// Handle connection persistence
+-	if ([self shouldAttemptPersistentConnection]) {
+-		
+-		NSString *connectionHeader = [[[self responseHeaders] objectForKey:@"Connection"] lowercaseString];
+-
+-		NSString *httpVersion = [NSMakeCollectable(CFHTTPMessageCopyVersion(message)) autorelease];
+-		
+-		// Don't re-use the connection if the server is HTTP 1.0 and didn't send Connection: Keep-Alive
+-		if (![httpVersion isEqualToString:(NSString *)kCFHTTPVersion1_0] || [connectionHeader isEqualToString:@"keep-alive"]) {
++	// Persistent connections are managed internally by libcurl — nothing to do here.
++	[self setConnectionCanBeReused:NO];
+ 
+-			// See if server explicitly told us to close the connection
+-			if (![connectionHeader isEqualToString:@"close"]) {
+-				
+-				NSString *keepAliveHeader = [[self responseHeaders] objectForKey:@"Keep-Alive"];
+-				
+-				// If we got a keep alive header, we'll reuse the connection for as long as the server tells us
+-				if (keepAliveHeader) { 
+-					int timeout = 0;
+-					int max = 0;
+-					NSScanner *scanner = [NSScanner scannerWithString:keepAliveHeader];
+-					[scanner scanString:@"timeout=" intoString:NULL];
+-					[scanner scanInt:&timeout];
+-					[scanner scanUpToString:@"max=" intoString:NULL];
+-					[scanner scanString:@"max=" intoString:NULL];
+-					[scanner scanInt:&max];
+-					if (max > 5) {
+-						[self setConnectionCanBeReused:YES];
+-						[self setPersistentConnectionTimeoutSeconds:timeout];
+-						#if DEBUG_PERSISTENT_CONNECTIONS
+-							ASI_DEBUG_LOG(@"[CONNECTION] Got a keep-alive header, will keep this connection open for %f seconds", [self persistentConnectionTimeoutSeconds]);
+-						#endif					
+-					}
+-				
+-				// Otherwise, we'll assume we can keep this connection open
+-				} else {
+-					[self setConnectionCanBeReused:YES];
+-					#if DEBUG_PERSISTENT_CONNECTIONS
+-						ASI_DEBUG_LOG(@"[CONNECTION] Got no keep-alive header, will keep this connection open for %f seconds", [self persistentConnectionTimeoutSeconds]);
+-					#endif
+-				}
+-			}
+-		}
+-	}
+-
+-	CFRelease(message);
 -	[self performSelectorOnMainThread:@selector(requestReceivedResponseHeaders:) withObject:[[[self responseHeaders] copy] autorelease] waitUntilDone:[NSThread isMainThread]];
 +	[self performSelectorOnMainThread:@selector(requestReceivedResponseHeaders:) withObject:[[[self responseHeaders] copy] autorelease] waitUntilDone:[NSThread XP_isMainThread]];
  }
  
  - (BOOL)willRedirect
-@@ -2314,7 +2316,7 @@
+@@ -2314,7 +2142,7 @@
  		return NO;
  	}
  
@@ -130,7 +856,7 @@
  
  	// By default, we redirect 301 and 302 response codes as GET requests
  	// According to RFC 2616 this is wrong, but this is what most browsers do, so it's probably what you're expecting to happen
-@@ -2616,10 +2618,10 @@
+@@ -2616,10 +2444,10 @@
  	#endif
  	//If the url was changed by the delegate, our CFHTTPMessageRef will be NULL and we'll go back to the start
  	if (!request) {
@@ -143,7 +869,7 @@
  }
  
  // Called by delegate or authentication dialog to cancel authentication
-@@ -2628,7 +2630,7 @@
+@@ -2628,7 +2456,7 @@
  	#if DEBUG_HTTP_AUTHENTICATION
  		ASI_DEBUG_LOG(@"[AUTH] Request %@ had authentication cancelled by its delegate or an ASIAuthenticationDialog",self);
  	#endif
@@ -152,7 +878,7 @@
  }
  
  - (void)failAuthentication
-@@ -2645,7 +2647,7 @@
+@@ -2645,7 +2473,7 @@
  	// Mac authentication dialog coming soon!
  	#if TARGET_OS_IPHONE
  	if ([self shouldPresentProxyAuthenticationDialog]) {
@@ -161,7 +887,7 @@
  		return YES;
  	}
  	return NO;
-@@ -2920,7 +2922,7 @@
+@@ -2920,7 +2748,7 @@
  	// Mac authentication dialog coming soon!
  	#if TARGET_OS_IPHONE
  	if ([self shouldPresentAuthenticationDialog]) {
@@ -170,7 +896,62 @@
  		return YES;
  	}
  	return NO;
-@@ -3234,7 +3236,7 @@
+@@ -3172,51 +3000,9 @@
+ #pragma mark stream status handlers
+ 
+ - (void)handleNetworkEvent:(CFStreamEventType)type
+-{	
+-	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+-
+-	[[self cancelledLock] lock];
+-	
+-	if ([self complete] || [self isCancelled]) {
+-		[[self cancelledLock] unlock];
+-		[pool drain];
+-		return;
+-	}
+-
+-	CFRetain(self);
+-
+-    // Dispatch the stream events.
+-    switch (type) {
+-        case kCFStreamEventHasBytesAvailable:
+-            [self handleBytesAvailable];
+-            break;
+-            
+-        case kCFStreamEventEndEncountered:
+-            [self handleStreamComplete];
+-            break;
+-            
+-        case kCFStreamEventErrorOccurred:
+-            [self handleStreamError];
+-            break;
+-            
+-        default:
+-            break;
+-    }
+-	
+-	[self performThrottling];
+-	
+-	[[self cancelledLock] unlock];
+-	
+-	if ([self downloadComplete] && [self needsRedirect]) {
+-		if (![self willAskDelegateToConfirmRedirect]) {
+-			[self performRedirect];
+-		}
+-	} else if ([self downloadComplete] && [self authenticationNeeded]) {
+-		[self attemptToApplyCredentialsAndResume];
+-	}
+-
+-	CFRelease(self);
+-	[pool drain];
++{
++	// No longer used — libcurl invokes handleStreamComplete / handleCurlFailureWithError directly.
++	(void)type;
+ }
+ 
+ - (BOOL)willAskDelegateToConfirmRedirect
+@@ -3234,7 +3020,7 @@
  	if (needToAskDelegateAboutRedirect) {
  		NSURL *newURL = [[[self redirectURL] copy] autorelease];
  		[self setRedirectURL:nil];
@@ -179,7 +960,33 @@
  		return true;
  	}
  	return false;
-@@ -3340,7 +3342,7 @@
+@@ -3242,22 +3028,9 @@
+ 
+ - (void)handleBytesAvailable
+ {
+-	if (![self responseHeaders]) {
+-		[self readResponseHeaders];
+-	}
+-	
+-	// If we've cancelled the load part way through (for example, after deciding to use a cached version)
+-	if ([self complete]) {
+-		return;
+-	}
+-	
+-	// In certain (presumably very rare) circumstances, handleBytesAvailable seems to be called when there isn't actually any data available
+-	// We'll check that there is actually data available to prevent blocking on CFReadStreamRead()
+-	// So far, I've only seen this in the stress tests, so it might never happen in real-world situations.
+-	if (!CFReadStreamHasBytesAvailable((CFReadStreamRef)[self readStream])) {
+-		return;
+-	}
+-
++	// No longer used — libcurl delivers the full body to rawResponseData via asi_curl_write_cb.
++	return;
++#if 0
+ 	long long bufferSize = 16384;
+ 	if (contentLength > 262144) {
+ 		bufferSize = 262144;
+@@ -3340,7 +3113,7 @@
  			} else {
  				data = [NSData dataWithBytes:buffer length:bytesRead];
  			}
@@ -188,48 +995,157 @@
  			
  		// Are we downloading to a file?
  		} else if ([self downloadDestinationPath]) {
-@@ -3650,17 +3652,24 @@
- - (void)handleStreamError
+@@ -3387,6 +3160,7 @@
+ 			}
+ 		}
+     }
++#endif
+ }
  
+ - (void)handleStreamComplete
+@@ -3402,10 +3176,10 @@
+ 		[self readResponseHeaders];
+ 	}
+ 
+-	[progressLock lock];	
+-	// Find out how much data we've uploaded so far
+-	[self setLastBytesSent:totalBytesSent];	
+-	[self setTotalBytesSent:[[NSMakeCollectable(CFReadStreamCopyProperty((CFReadStreamRef)[self readStream], kCFStreamPropertyHTTPRequestBytesWrittenCount)) autorelease] unsignedLongLongValue]];
++	[progressLock lock];
++	// libcurl handles upload accounting internally — we just mark progress complete.
++	[self setLastBytesSent:totalBytesSent];
++	[self setTotalBytesSent:[self postLength]];
+ 	[self setComplete:YES];
+ 	if (![self contentLength]) {
+ 		[self setContentLength:[self totalBytesRead]];
+@@ -3623,121 +3397,31 @@
+ 
+ - (BOOL)retryUsingNewConnection
+ {
+-	if ([self retryCount] == 0) {
+-
+-		[self setWillRetryRequest:YES];
+-		[self cancelLoad];
+-		[self setWillRetryRequest:NO];
+-
+-		#if DEBUG_PERSISTENT_CONNECTIONS
+-			ASI_DEBUG_LOG(@"[CONNECTION] Request attempted to use connection #%@, but it has been closed - will retry with a new connection", [[self connectionInfo] objectForKey:@"id"]);
+-		#endif
+-		[connectionsLock lock];
+-		[[self connectionInfo] removeObjectForKey:@"request"];
+-		[persistentConnectionsPool removeObject:[self connectionInfo]];
+-		[self setConnectionInfo:nil];
+-		[connectionsLock unlock];
+-		[self setRetryCount:[self retryCount]+1];
+-		[self startRequest];
+-		return YES;
+-	}
+-	#if DEBUG_PERSISTENT_CONNECTIONS
+-		ASI_DEBUG_LOG(@"[CONNECTION] Request attempted to use connection #%@, but it has been closed - we have already retried with a new connection, so we must give up", [[self connectionInfo] objectForKey:@"id"]);
+-	#endif	
++	// libcurl manages its own connection pool — we don't transparently retry here.
+ 	return NO;
+ }
+ 
+ - (void)handleStreamError
+-
  {
 -	NSError *underlyingError = [NSMakeCollectable(CFReadStreamCopyError((CFReadStreamRef)[self readStream])) autorelease];
-+	// Tiger (10.4): CFReadStreamCopyError (returns CFErrorRef) is 10.5+ only.
-+	// Use CFReadStreamGetError (returns CFStreamError struct) and map to NSError.
-+	NSError *underlyingError = nil;
-+	{
-+		CFStreamError cfErr = CFReadStreamGetError((CFReadStreamRef)[self readStream]);
-+		if (cfErr.error != 0) {
-+			NSString *domain = (cfErr.domain == kCFStreamErrorDomainPOSIX)
-+				? NSPOSIXErrorDomain : NSOSStatusErrorDomain;
-+			underlyingError = [NSError errorWithDomain:domain code:cfErr.error userInfo:nil];
-+		}
-+	}
- 
- 	if (![self error]) { // We may already have handled this error
- 		
+-
+-	if (![self error]) { // We may already have handled this error
+-		
 -		// First, check for a 'socket not connected', 'broken pipe' or 'connection lost' error
-+		// First, check for a 'socket not connected' or 'broken pipe' error
- 		// This may occur when we've attempted to reuse a connection that should have been closed
+-		// This may occur when we've attempted to reuse a connection that should have been closed
 -		// If we get this, we need to retry the request
 -		// We'll only do this once - if it happens again on retry, we'll give up
 -		// -1005 = kCFURLErrorNetworkConnectionLost - this doesn't seem to be declared on Mac OS 10.5
 -		if (([[underlyingError domain] isEqualToString:NSPOSIXErrorDomain] && ([underlyingError code] == ENOTCONN || [underlyingError code] == EPIPE)) 
 -			|| ([[underlyingError domain] isEqualToString:(NSString *)kCFErrorDomainCFNetwork] && [underlyingError code] == -1005)) {
-+		// Tiger (10.4): kCFErrorDomainCFNetwork is 10.6+ only (NULL on Tiger); omit that check.
-+		if ([[underlyingError domain] isEqualToString:NSPOSIXErrorDomain] && ([underlyingError code] == ENOTCONN || [underlyingError code] == EPIPE)) {
- 			if ([self retryUsingNewConnection]) {
- 				return;
- 			}
-@@ -3730,7 +3739,7 @@
- 			// This can prevent flicker when you have a single request finish and then immediately start another request
- 			// We run this on the main thread because we have no guarantee this thread will have a runloop in 0.5 seconds time
- 			// We don't bother the cancel this call if we start a new request, because we'll check if requests are running before we hide it
--			[[self class] performSelectorOnMainThread:@selector(hideNetworkActivityIndicatorAfterDelay) withObject:nil waitUntilDone:[NSThread isMainThread]];
-+			[[self class] performSelectorOnMainThread:@selector(hideNetworkActivityIndicatorAfterDelay) withObject:nil waitUntilDone:[NSThread XP_isMainThread]];
- 		}
- 		[connectionsLock unlock];
+-			if ([self retryUsingNewConnection]) {
+-				return;
+-			}
+-		}
+-		
+-		NSString *reason = @"A connection failure occurred";
+-		
+-		// We'll use a custom error message for SSL errors, but you should always check underlying error if you want more details
+-		// For some reason SecureTransport.h doesn't seem to be available on iphone, so error codes hard-coded
+-		// Also, iPhone seems to handle errors differently from Mac OS X - a self-signed certificate returns a different error code on each platform, so we'll just provide a general error
+-		if ([[underlyingError domain] isEqualToString:NSOSStatusErrorDomain]) {
+-			if ([underlyingError code] <= -9800 && [underlyingError code] >= -9818) {
+-				reason = [NSString stringWithFormat:@"%@: SSL problem (Possible causes may include a bad/expired/self-signed certificate, clock set to wrong date)",reason];
+-			}
+-		}
+-		[self cancelLoad];
+-		[self failWithError:[NSError errorWithDomain:NetworkRequestErrorDomain code:ASIConnectionFailureErrorType userInfo:[NSDictionary dictionaryWithObjectsAndKeys:reason,NSLocalizedDescriptionKey,underlyingError,NSUnderlyingErrorKey,nil]]];
+-	} else {
+-		[self cancelLoad];
+-	}
+-	[self checkRequestStatus];
++	// No longer used — libcurl errors are delivered via handleCurlFailureWithError:.
+ }
  
-@@ -3829,10 +3838,6 @@
+ #pragma mark managing the read stream
+ 
+ - (void)destroyReadStream
+ {
+-    if ([self readStream]) {
+-		[self unscheduleReadStream];
+-		if (![self connectionCanBeReused]) {
+-			[[self readStream] removeFromRunLoop:[NSRunLoop currentRunLoop] forMode:[self runLoopMode]];
+-			[[self readStream] close];
+-		}
+-		[self setReadStream:nil];
+-    }	
++	// No read stream under libcurl — nothing to do.
+ }
+ 
+ - (void)scheduleReadStream
+ {
+-	if ([self readStream] && ![self readStreamIsScheduled]) {
+-
+-		[connectionsLock lock];
+-		runningRequestCount++;
+-		if (shouldUpdateNetworkActivityIndicator) {
+-			[[self class] showNetworkActivityIndicator];
+-		}
+-		[connectionsLock unlock];
+-
+-		// Reset the timeout
+-		[self setLastActivityTime:[NSDate date]];
+-		CFStreamClientContext ctxt = {0, self, NULL, NULL, NULL};
+-		CFReadStreamSetClient((CFReadStreamRef)[self readStream], kNetworkEvents, ReadStreamClientCallBack, &ctxt);
+-		[[self readStream] scheduleInRunLoop:[NSRunLoop currentRunLoop] forMode:[self runLoopMode]];
+-		[self setReadStreamIsScheduled:YES];
+-	}
++	// No read stream under libcurl — nothing to do.
+ }
+ 
+ 
+ - (void)unscheduleReadStream
+ {
+-	if ([self readStream] && [self readStreamIsScheduled]) {
+-
+-		[connectionsLock lock];
+-		runningRequestCount--;
+-		if (shouldUpdateNetworkActivityIndicator && runningRequestCount == 0) {
+-			// This call will wait half a second before turning off the indicator
+-			// This can prevent flicker when you have a single request finish and then immediately start another request
+-			// We run this on the main thread because we have no guarantee this thread will have a runloop in 0.5 seconds time
+-			// We don't bother the cancel this call if we start a new request, because we'll check if requests are running before we hide it
+-			[[self class] performSelectorOnMainThread:@selector(hideNetworkActivityIndicatorAfterDelay) withObject:nil waitUntilDone:[NSThread isMainThread]];
+-		}
+-		[connectionsLock unlock];
+-
+-		CFReadStreamSetClient((CFReadStreamRef)[self readStream], kCFStreamEventNone, NULL, NULL);
+-		[[self readStream] removeFromRunLoop:[NSRunLoop currentRunLoop] forMode:[self runLoopMode]];
+-		[self setReadStreamIsScheduled:NO];
+-	}
++	// No read stream under libcurl — nothing to do.
+ }
+ 
+ #pragma mark cleanup
+@@ -3829,10 +3513,6 @@
  
  #if TARGET_OS_IPHONE
  			NSDictionary *proxySettings = [NSMakeCollectable(CFNetworkCopySystemProxySettings()) autorelease];
@@ -240,7 +1156,7 @@
  			proxies = [NSMakeCollectable(CFNetworkCopyProxiesForURL((CFURLRef)[self url], (CFDictionaryRef)proxySettings)) autorelease];
  
  			// Now check to see if the proxy settings contained a PAC url, we need to run the script to get the real list of proxies if so
-@@ -3842,6 +3847,11 @@
+@@ -3842,6 +3522,11 @@
  				[self fetchPACFile];
  				return NO;
  			}
@@ -252,7 +1168,7 @@
  		}
  
  		if (!proxies) {
-@@ -3909,18 +3919,14 @@
+@@ -3909,18 +3594,14 @@
  
  	[self setPACFileRequest:PACRequest];
  
@@ -272,7 +1188,7 @@
  	[connectionsLock unlock];
  }
  
-@@ -4002,9 +4008,8 @@
+@@ -4002,9 +3683,8 @@
  		[self runPACScript:[theRequest responseString]];
  	}
  
@@ -283,7 +1199,7 @@
  	[connectionsLock unlock];
  
  	// We no longer need our PAC file request
-@@ -4689,11 +4694,16 @@
+@@ -4689,11 +4369,16 @@
  #pragma mark queue
  
  // Returns the shared queue
@@ -301,7 +1217,7 @@
  #pragma mark cache
  
  + (void)setDefaultCache:(id <ASICacheDelegate>)cache
-@@ -4776,8 +4786,13 @@
+@@ -4776,8 +4461,13 @@
  	if (networkThread == nil) {
  		@synchronized(self) {
  			if (networkThread == nil) {
@@ -317,7 +1233,7 @@
  			}
  		}
  	}
-@@ -4786,15 +4801,21 @@
+@@ -4786,15 +4476,21 @@
  
  + (void)runRequests
  {

@@ -1,5 +1,9 @@
 # Vienna 3.0.8 Upgrade Plan
 
+## Status (2026-04-17)
+
+App builds and launches on the x4-vm target. Preferences, launch path, CrossPlatform cleanup, and the libcurl-backed networking swap are all landed on `experiment/3.0.8`. Remaining items are marked `[ ]` below; completed items are `[x]`.
+
 ## Goal
 
 Upgrade the legacy PPC/i386 build from Vienna 2.2.0 to Vienna 3.0.8 (commit `074a131a`) without
@@ -8,7 +12,7 @@ comes for free from 3.0.8 — no more manual backporting.
 
 ## vienna/ submodule
 
-Already checked out to `074a131a1fb50b3ed9d50df88e1b69d2a19f423a` (3.0.8).
+Already checked out to `074a131a1fb50b3ed9d50df88e1b69d2a19f423a` (3.0.8). [x]
 
 ---
 
@@ -48,12 +52,24 @@ Already checked out to `074a131a1fb50b3ed9d50df88e1b69d2a19f423a` (3.0.8).
 
 ## The Hard Parts
 
-### 1. ASICURLRequest (new library — main work)
+### 1. ASIHTTPRequest networking [x] (revised approach)
 
-3.0.8's `GoogleReader.m` and `RefreshManager.m` use ASIHTTPRequest throughout. Rather than
-compiling the real ASIHTTPRequest (which brings in its own threading model and complexity), we
-build a drop-in replacement called **ASICURLRequest** that implements the same API surface
-using libcurl — the same libcurl already powering our build.
+**Outcome**: We went through two iterations here.
+
+1. **First pass (commit `0f9d24c`)** — Built a drop-in replacement called **ASICURLRequest**
+   at `altivec/libs/ASICURLRequest/` that re-implemented ASI's public API surface on top of
+   libcurl. This compiled and linked but duplicated a lot of ASI semantics.
+2. **Current approach** — Patch the real ASIHTTPRequest in-place via the normal
+   `build-stage/ → patches/deps/ASIHTTPRequest/` flow. CFNetwork streaming
+   (`CFReadStreamCreateForHTTPRequest`, `CFHTTPMessage*` request building, `ReadStreamClientCallBack`)
+   is replaced by a libcurl worker thread. `curl_easy_perform` runs on a detached NSThread per
+   request; completion/failure is marshalled back to the shared network thread via
+   `XP_performSelector:onThread:`. CFHTTPMessage / CFHTTPAuthentication data-structure APIs
+   remain (they still work on 10.4/10.5 — only the TLS-1.2-incapable stream was the problem).
+   This avoids maintaining a parallel ASI-alike and means `ASIFormDataRequest`,
+   `ASINetworkQueue`, and all Vienna callers compile unchanged.
+
+The `altivec/libs/ASICURLRequest/` tree is retained as reference.
 
 **Location**: `altivec/libs/ASICURLRequest/`
 
@@ -98,7 +114,7 @@ using libcurl — the same libcurl already powering our build.
   + `NSLock lock_` + int `maxConcurrent_`. When a request finishes it calls back to
   the queue to dequeue the next pending one.
 
-### 2. GCD/Blocks in 4 source files
+### 2. GCD/Blocks in 4 source files [x]
 
 These 3.0.8 files use `dispatch_async`/`^{}` which are 10.6+:
 
@@ -111,7 +127,7 @@ These 3.0.8 files use `dispatch_async`/`^{}` which are 10.6+:
 
 These go through the normal patch workflow: edit `build-stage/source/`, then `make patches`.
 
-### 3. MASPreferences
+### 3. MASPreferences [x]
 
 **SS_PrefsController cannot be used directly.** It is a bundle-based plugin loader that scans
 for `.preferencePane` bundles on disk. 3.0.8's AppController creates `NSViewController`
@@ -128,16 +144,16 @@ offending call using the Lapcat pattern:
 // Replacement: override loadWindow, create NSWindow manually, call [self setWindow:]
 ```
 
-**Files needed** (add to `src/custom/`):
-- `MASPreferencesWindowController.h/.m` — programmatic window, otherwise identical to Pods version
-- `MASPreferencesViewController.h` — protocol header only, no implementation needed
+**What landed**:
+- `MASPreferencesWindowController.m` patched via `patches/deps/MASPreferences/` so the window
+  is built programmatically (no XIB).
+- Pref-pane views are constructed in code under `src/nibs/` — one builder per pane
+  (`GeneralPreferencesView.m`, `AppearancePreferencesView.m`, `AdvancedPreferencesView.m`,
+  `SyncingPreferencesView.m`), since we can't run `ibtool` for 10.5-era XIBs from our toolchain.
+- `NSViewController` polyfill (init, `-view`, `-setView:`) lives in `CrossPlatform.h` and is
+  used on Tiger; real class is used on 10.5+.
 
-**Tiger blocker**: `NSViewController` was introduced in 10.5. All 4 preference pane files
-inherit from it. Since Tiger's AppKit has no `NSViewController`, we define a minimal polyfill
-in `CrossPlatform.h` — `initWithNibName:bundle:`, `-view`, `-setView:`. On 10.5+ the real
-class is used at runtime.
-
-### 4. FMDB replaces SQLDatabase
+### 4. FMDB replaces SQLDatabase [x]
 
 `Database.h` now imports `FMDatabase.h` instead of `SQLDatabase.h`. FMDB wraps SQLite with
 an Objective-C API. 6 source files from `vienna/Pods/FMDB/src/fmdb/`. We already compile
@@ -146,7 +162,7 @@ SQLite from source — FMDB just sits on top of it.
 One concern: FMDB may use `NSInteger` (10.5+ typedef). Check at compile time; patch if needed
 using `XP_` pattern.
 
-### 5. New source files in Makefile
+### 5. New source files in Makefile [x]
 
 Files in 3.0.8 not present in 2.2.0 that need to be added to `VIENNA_SOURCES`:
 ```
@@ -193,11 +209,11 @@ SQLDatabase.m / SQLDatabasePrivate.m / SQLResult.m / SQLRow.m
 SyncPreferences.m
 ```
 
-### 6. XIBs vs NIBs
+### 6. XIBs vs NIBs [x]
 
-3.0.8 uses `.xib` (XML) format. Our Tiger toolchain compiles `.xib` → `.nib` using `ibtool`
-from the 10.5 SDK. Need to verify `ibtool` is available in the OSXCross environment.
-If not, we pre-compile XIBs to NIBs on a Mac and commit the results to `src/nibs/`.
+Resolved by sidestepping XIB compilation entirely: preference panes and the preferences
+window are built programmatically (see section 3 above). `src/nibs/` holds hand-written
+view builders — there are no pre-compiled NIBs to commit.
 
 ---
 
@@ -218,32 +234,47 @@ Even with 3.0.8 source, some Tiger-specific patches will still be required:
 
 ## Build Order
 
-1. Build `libASICURLRequest.a` (new): `cd altivec/libs/ASICURLRequest && make -f Makefile-mac`
-2. Build `libAICURLConnection.a` (existing): no change
-3. `make stage` — stages all vienna/ files with patches applied
-4. `make debug` — full app build
+1. `make stage` — stages all vienna/ and deps/ files with patches applied
+2. `make debug` — full app build (ASIHTTPRequest, FMDB, MASPreferences, PXListView all
+   compile as part of the main build from `build-stage/deps/`)
+
+Prebuilt `.a` libraries (libcurl, libssl, libcrypto, libz) live in
+`altivec/libs/libcurl/build-mac/lib/` and are linked in via `CURL_LIBS` in the Makefile.
 
 ---
 
-## Migration Workflow
+## Migration Workflow (historical)
 
 ```
-[checkout vienna/ to 3.0.8]           ← done
+[checkout vienna/ to 3.0.8]                        ← done
         ↓
-[build ASICURLRequest library]         ← new library, step 1
+[prototype ASICURLRequest drop-in library]         ← done (retained as reference)
         ↓
-[update Makefile: new sources, new deps]
+[update Makefile: new sources, new deps]           ← done
         ↓
-[make stage && make debug]             ← expect compile errors
+[add FMDB / MASPreferences / PXListView via deps/] ← done
         ↓
-[patch GCD usage in 4 files]           ← main compat work
+[patch GCD usage in 4 files]                       ← done
         ↓
-[fix Tiger-specific crashes]           ← XP_ pattern as before
+[programmatic preference-pane views]               ← done (src/nibs/)
         ↓
-[verify XIBs compile / pre-compile]
+[fix Tiger-specific crashes via XP_ pattern]       ← done (CrossPlatform.h/.m)
         ↓
-[make clean && make debug && deploy]
+[swap ASIHTTPRequest CFNetwork → libcurl in-place] ← done (this session)
+        ↓
+[make clean && make debug && deploy to x4-vm]      ← verified
 ```
+
+## Remaining Work
+
+- [ ] Confirm live RSS refresh against real hosts (the x4-vm deploy surfaced only a DNS
+      resolution error, which appears environmental — libcurl itself is wired up correctly).
+- [ ] Exercise Google Reader / Old Reader / Inoreader sync end-to-end.
+- [ ] Audit auth flows (401/407) — the CFHTTPAuthentication path still references
+      `request` (CFHTTPMessageRef) which is now always `NULL`; most of those calls degrade
+      to no-ops, but we haven't validated NTLM/Digest challenges against a real server.
+- [ ] Runtime smoke test on a true PPC Tiger / Leopard machine (current validation was
+      against the x4-vm deploy target only).
 
 ---
 

@@ -191,6 +191,7 @@ CFLAGS_BASE = $(OPT_FLAGS) \
   -I$(THIRDPARTY_DIR)/BJRVerticallyCenteredTextFieldCell \
   -I$(THIRDPARTY_DIR)/DSClickableURLTextField \
   -I$(THIRDPARTY_DIR)/VTPG \
+  -I$(CURL_DIR)/include \
   -F$(META_DIR)/resources -F$(BUILD_DIR)/Frameworks \
   -D"HAVE_USLEEP=1" -D"SQLITE_THREADSAFE=0" \
   -fno-stack-protector -fno-common -fno-zero-initialized-in-bss
@@ -204,10 +205,12 @@ OBJC_FLAGS = -fobjc-exceptions \
   -include $(SRC_DIR)/custom/CrossPlatform.h
 
 # --- Linking Flags ---
-# ASIHTTPRequest uses CFNetwork (native Mac HTTP stack) + zlib for compression.
-# libcurl/libssl/libcrypto will be re-added when ASIHTTPRequest is patched to
-# replace CFNetwork with libcurl in a future step.
+# ASIHTTPRequest: patched to use libcurl (replaces CFNetwork streaming).
+# CFNetwork framework is still linked for auth/proxy data-structure APIs.
 CURL_LIBS = \
+  $(CURL_DIR)/lib/libcurl.a \
+  $(CURL_DIR)/lib/libssl.a \
+  $(CURL_DIR)/lib/libcrypto.a \
   $(CURL_DIR)/lib/libz.a
 
 LDFLAGS_BASE = \
