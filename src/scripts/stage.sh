@@ -40,7 +40,14 @@ find "$VIENNA_DIR/src/models" -maxdepth 1 \
 # External deps
 echo " > Copying deps/..."
 cp -r "$DEPS_DIR/JSONKit"/. "$META_DIR/deps/JSONKit/"
-cp -r "$DEPS_DIR/sqlite"/. "$META_DIR/deps/sqlite/"
+SQLITE_ZIP="sqlite-amalgamation-3071100.zip"
+SQLITE_ZIP_PATH="$DEPS_DIR/$SQLITE_ZIP"
+if [ ! -f "$SQLITE_ZIP_PATH" ]; then
+  echo " > Downloading SQLite amalgamation..."
+  curl -fL "https://sqlite.org/$SQLITE_ZIP" -o "$SQLITE_ZIP_PATH"
+fi
+echo " > Extracting SQLite amalgamation..."
+unzip -jo "$SQLITE_ZIP_PATH" "*.c" "*.h" -d "$META_DIR/deps/sqlite/"
 cp "$VIENNA_DIR/Pods/PXListView/Classes/"*.{m,h} "$META_DIR/deps/PXListView/" 2>/dev/null || true
 cp "$VIENNA_DIR/Pods/MASPreferences/"*.{m,h} "$META_DIR/deps/MASPreferences/" 2>/dev/null || true
 cp "$REPO_ROOT/deps/fmdb/src/FMDatabase."{m,h} "$META_DIR/deps/FMDB/"

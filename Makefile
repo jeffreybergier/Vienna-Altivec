@@ -195,7 +195,7 @@ CFLAGS_BASE = $(OPT_FLAGS) \
   -I$(THIRDPARTY_DIR)/VTPG \
   -I$(CURL_DIR)/include \
   -F$(META_DIR)/resources -F$(BUILD_DIR)/Frameworks \
-  -D"HAVE_USLEEP=1" -D"SQLITE_THREADSAFE=0" \
+  -D"HAVE_USLEEP=1" -D"SQLITE_THREADSAFE=0" -D"SQLITE_WITHOUT_ZONEMALLOC=1" \
   -fno-stack-protector -fno-common -fno-zero-initialized-in-bss
 
 # Headers injected into all Objective-C sources via compiler flag.
@@ -233,7 +233,7 @@ LDFLAGS_PSM = \
 
 check:
 	@if [ ! -f "$(META_DIR)/deps/sqlite/sqlite3.c" ]; then \
-		echo " [!] ERROR: sqlite not found in deps/sqlite/. Copy sqlite3.c and sqlite3.h there."; \
+		echo " [!] ERROR: sqlite not staged. Run: make stage"; \
 		exit 1; \
 	fi
 	@if [ ! -f "$(ASI_DIR)/ASIHTTPRequest.m" ]; then \
