@@ -7,7 +7,7 @@
 // GCC adds one leading underscore to C symbols, so objc_setProperty → _objc_setProperty in Mach-O,
 // which matches the reference emitted by @synthesize-generated setters.
 
-void objc_setProperty(id self, SEL _cmd, ptrdiff_t offset, id newValue, BOOL atomic, signed char shouldCopy) {
+__attribute__((weak)) void objc_setProperty(id self, SEL _cmd, ptrdiff_t offset, id newValue, BOOL atomic, signed char shouldCopy) {
   (void)_cmd; (void)atomic;
   id *slot = (id *)((char *)self + offset);
   id oldValue = *slot;
@@ -24,7 +24,7 @@ void objc_setProperty(id self, SEL _cmd, ptrdiff_t offset, id newValue, BOOL ato
 }
 
 // Getter variant (for atomic retain properties — returns retained-then-autoreleased)
-id objc_getProperty(id self, SEL _cmd, ptrdiff_t offset, BOOL atomic) {
+__attribute__((weak)) id objc_getProperty(id self, SEL _cmd, ptrdiff_t offset, BOOL atomic) {
   (void)_cmd; (void)atomic;
   id *slot = (id *)((char *)self + offset);
   return [[*slot retain] autorelease];
@@ -49,88 +49,6 @@ BOOL createRecursiveDirectory(NSString * path)
 	return [fileManager createDirectoryAtPath:path attributes:nil];
 }
 
-// ---- Fast enumeration polyfill for Tiger ----
-
-@implementation NSArray (XP_FastEnumeration)
-- (NSUInteger)countByEnumeratingWithState:(NSFastEnumerationState *)state objects:(id *)stackbuf count:(NSUInteger)len {
-  NSUInteger idx = state->state;
-  NSUInteger selfCount = [self count];
-  if (idx == 0)
-    state->mutationsPtr = &state->extra[0];
-  NSUInteger cnt = 0;
-  while (idx < selfCount && cnt < len) {
-    stackbuf[cnt++] = [self objectAtIndex:idx++];
-  }
-  state->state = idx;
-  state->itemsPtr = stackbuf;
-  return cnt;
-}
-@end
-
-@implementation NSSet (XP_FastEnumeration)
-- (NSUInteger)countByEnumeratingWithState:(NSFastEnumerationState *)state objects:(id *)stackbuf count:(NSUInteger)len {
-  NSArray * arr = (state->state == 0) ? [self allObjects] : nil;
-  if (arr) {
-    state->extra[0] = (unsigned long)arr;
-    [arr retain];
-    state->mutationsPtr = &state->extra[1];
-  } else {
-    arr = (NSArray *)(void *)state->extra[0];
-  }
-  NSUInteger idx = state->state & 0xFFFF;
-  NSUInteger total = [arr count];
-  NSUInteger cnt = 0;
-  while (idx < total && cnt < len) {
-    stackbuf[cnt++] = [arr objectAtIndex:idx++];
-  }
-  state->state = (state->state & ~0xFFFF) | idx;
-  state->itemsPtr = stackbuf;
-  if (cnt == 0 && arr) {
-    [(NSArray *)(void *)state->extra[0] release];
-  }
-  return cnt;
-}
-@end
-
-@implementation NSDictionary (XP_FastEnumeration)
-- (NSUInteger)countByEnumeratingWithState:(NSFastEnumerationState *)state objects:(id *)stackbuf count:(NSUInteger)len {
-  NSArray * keys = (state->state == 0) ? [self allKeys] : nil;
-  if (keys) {
-    state->extra[0] = (unsigned long)keys;
-    [keys retain];
-    state->mutationsPtr = &state->extra[1];
-  } else {
-    keys = (NSArray *)(void *)state->extra[0];
-  }
-  NSUInteger idx = state->state & 0xFFFF;
-  NSUInteger total = [keys count];
-  NSUInteger cnt = 0;
-  while (idx < total && cnt < len) {
-    stackbuf[cnt++] = [keys objectAtIndex:idx++];
-  }
-  state->state = (state->state & ~0xFFFF) | idx;
-  state->itemsPtr = stackbuf;
-  if (cnt == 0 && keys) {
-    [(NSArray *)(void *)state->extra[0] release];
-  }
-  return cnt;
-}
-@end
-
-@implementation NSEnumerator (XP_FastEnumeration)
-- (NSUInteger)countByEnumeratingWithState:(NSFastEnumerationState *)state objects:(id *)stackbuf count:(NSUInteger)len {
-  if (state->state == 0)
-    state->mutationsPtr = &state->extra[0];
-  NSUInteger cnt = 0;
-  id obj;
-  while (cnt < len && (obj = [self nextObject]) != nil) {
-    stackbuf[cnt++] = obj;
-  }
-  state->state = 1;
-  state->itemsPtr = stackbuf;
-  return cnt;
-}
-@end
 
 @implementation NSCell (XP_Compatibility)
 -(void)XP_setBackgroundStyle:(NSInteger)style;
@@ -416,7 +334,7 @@ BOOL createRecursiveDirectory(NSString * path)
 
 @implementation NSString (XP_IntegerValue)
 -(NSInteger)XP_integerValue { return (NSInteger)[self intValue]; }
--(NSUInteger)XP_unsignedIntegerValue { return (NSUInteger)[self intValue]; }
+-(NSUInteger)XP_unsignedIntegerValue { return (NSUInteger)strtoul([self UTF8String], NULL, 10); }
 @end
 
 #if MAC_OS_X_VERSION_MAX_ALLOWED < 1060

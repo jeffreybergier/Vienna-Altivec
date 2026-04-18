@@ -34,6 +34,11 @@
 + (BOOL)isGrowlRunning;
 @end
 
+// ---- Fast enumeration polyfill (Tiger / 10.4) ----
+// Injects countByEnumeratingWithState:objects:count: only when missing at runtime.
+@interface XPFastEnumerationInstaller : NSObject
+@end
+
 // ---- Sparkle ----
 #define SUUpdaterWillRestartNotification @"SUUpdaterWillRestartNotification"
 

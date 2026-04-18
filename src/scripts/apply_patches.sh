@@ -41,7 +41,7 @@ apply_dir "$PATCHES_DIR/resources" "$META_DIR/resources" 0
 if [ -f "$PATCHES_DIR/Info.plist.patch" ]; then
   echo " > Info.plist"
   pushd "$META_DIR" > /dev/null
-  patch -s -p0 < "$PATCHES_DIR/Info.plist.patch" || echo "     ! Warning: failed Info.plist.patch"
+  patch -s --batch -p0 Info.plist < "$PATCHES_DIR/Info.plist.patch" || echo "     ! Warning: failed Info.plist.patch"
   popd > /dev/null
 fi
 

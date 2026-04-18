@@ -45,22 +45,6 @@ BOOL createRecursiveDirectory(NSString * path);
 #define XPInteger int
 #endif
 
-// Fast enumeration polyfill for Tiger (10.4) which lacks NSFastEnumeration support
-@interface NSArray (XP_FastEnumeration)
-- (NSUInteger)countByEnumeratingWithState:(NSFastEnumerationState *)state objects:(id *)stackbuf count:(NSUInteger)len;
-@end
-
-@interface NSSet (XP_FastEnumeration)
-- (NSUInteger)countByEnumeratingWithState:(NSFastEnumerationState *)state objects:(id *)stackbuf count:(NSUInteger)len;
-@end
-
-@interface NSDictionary (XP_FastEnumeration)
-- (NSUInteger)countByEnumeratingWithState:(NSFastEnumerationState *)state objects:(id *)stackbuf count:(NSUInteger)len;
-@end
-
-@interface NSEnumerator (XP_FastEnumeration)
-- (NSUInteger)countByEnumeratingWithState:(NSFastEnumerationState *)state objects:(id *)stackbuf count:(NSUInteger)len;
-@end
 
 @interface NSTableColumn (XP_Compatibility)
 -(void)XP_setHidden:(BOOL)hidden;
