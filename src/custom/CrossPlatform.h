@@ -53,11 +53,9 @@ BOOL createRecursiveDirectory(NSString * path);
 
 @interface NSCell (XP_Compatibility)
 -(void)XP_setBackgroundStyle:(NSInteger)style;
+-(NSInteger)backgroundStyle;
+-(void)setBackgroundStyle:(NSInteger)style;
 @end
-
-#if !defined(NSWindowCollectionBehaviorFullScreenPrimary)
-enum { NSWindowCollectionBehaviorFullScreenPrimary = (1 << 7) };
-#endif
 
 @interface NSWindow (XP_Compatibility)
 -(void)XP_setCollectionBehavior:(NSUInteger)behavior;
@@ -125,10 +123,6 @@ enum { NSWindowCollectionBehaviorFullScreenPrimary = (1 << 7) };
 - (BOOL)commitEditing;
 @end
 #endif
-
-@interface NSViewController (XP_Compatibility)
--(void)viewWillAppear;
-@end
 
 @interface NSObject (XP_WebOpenPanel)
 -(void)XP_chooseFilenames:(NSArray *)filenames;

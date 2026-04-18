@@ -11,7 +11,15 @@
  	
  	// The url for this operation, should include GET params in the query string where appropriate
  	NSURL *url; 
-@@ -845,7 +847,12 @@
+@@ -610,6 +612,7 @@
+ 
+ // Clears all delegates and blocks, then cancels the request
+ - (void)clearDelegatesAndCancel;
++- (BOOL)isCancelled;
+ 
+ #pragma mark HEAD request
+ 
+@@ -845,7 +848,12 @@
  #pragma mark queue
  
  // Returns the shared queue

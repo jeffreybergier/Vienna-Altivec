@@ -49,6 +49,28 @@ BOOL createRecursiveDirectory(NSString * path)
 	return [fileManager createDirectoryAtPath:path attributes:nil];
 }
 
+#if MAC_OS_X_VERSION_MAX_ALLOWED < 1060
+@implementation NSRunningApplication
++ (NSArray *)runningApplicationsWithBundleIdentifier:(NSString *)bundleIdentifier;
+{
+  // 10.6+ only — return empty on Tiger to allow caller to launch the app
+  (void)bundleIdentifier;
+  return [NSArray array];
+}
+@end
+#endif
+
+@implementation NSTableColumn (XP_Compatibility)
+-(void)XP_setHidden:(BOOL)hidden {
+  if ([self respondsToSelector:@selector(setHidden:)])
+    [self setHidden:hidden];
+}
+-(BOOL)XP_isHidden {
+  if ([self respondsToSelector:@selector(isHidden)])
+    return [self isHidden];
+  return NO;
+}
+@end
 
 @implementation NSCell (XP_Compatibility)
 -(void)XP_setBackgroundStyle:(NSInteger)style;
@@ -101,10 +123,10 @@ BOOL createRecursiveDirectory(NSString * path)
 		MethodPtr m = (MethodPtr)[self methodForSelector:sel];
 		return m(self, sel, path, createIntermediates, attributes, error);
 	}
-	
+
 	if (createIntermediates)
 		return createRecursiveDirectory(path);
-	
+
 	return [self createDirectoryAtPath:path attributes:attributes];
 }
 @end
@@ -137,7 +159,7 @@ BOOL createRecursiveDirectory(NSString * path)
 	if ([self respondsToSelector:sel]) {
 		return [self performSelector:sel];
 	} else {
-		return [[self path] pathExtension]; 
+		return [[self path] pathExtension];
 	}
 }
 @end
@@ -162,6 +184,30 @@ BOOL createRecursiveDirectory(NSString * path)
 	NSString * replaced = [[within componentsSeparatedByString:target] componentsJoinedByString:replacement];
 	return [[before stringByAppendingString:replaced] stringByAppendingString:after];
 }
+@end
+
+@implementation NSNumber (XP_Compatibility)
++(NSNumber *)XP_numberWithInteger:(NSInteger)value;
+{
+	return [NSNumber numberWithInt:(int)value];
+}
++(NSNumber *)XP_numberWithUnsignedInteger:(NSUInteger)value;
+{
+	return [NSNumber numberWithUnsignedInt:(unsigned int)value];
+}
+-(NSInteger)XP_integerValue;
+{
+	return (NSInteger)[self intValue];
+}
+-(NSUInteger)XP_unsignedIntegerValue;
+{
+	return (NSUInteger)[self unsignedIntValue];
+}
+@end
+
+@implementation NSString (XP_IntegerValue)
+-(NSInteger)XP_integerValue { return (NSInteger)[self intValue]; }
+-(NSUInteger)XP_unsignedIntegerValue { return (NSUInteger)strtoul([self UTF8String], NULL, 10); }
 @end
 
 @implementation NSImage (XP_Compatibility)
@@ -204,11 +250,38 @@ BOOL createRecursiveDirectory(NSString * path)
 }
 @end
 
-@implementation NSViewController (XP_Compatibility)
--(void)viewWillAppear;
-{
+#if MAC_OS_X_VERSION_MAX_ALLOWED < 1060
+@implementation XPViewController
+
+- (id)initWithNibName:(NSString *)nibName bundle:(NSBundle *)bundle {
+  (void)nibName; (void)bundle;
+  return [super init];
 }
+
+- (NSView *)view {
+  if (!_view) [self loadView];
+  return _view;
+}
+
+- (void)setView:(NSView *)view {
+  if (_view != view) {
+    [_view release];
+    _view = [view retain];
+  }
+}
+
+- (void)loadView {}
+- (void)viewWillAppear {}
+- (BOOL)commitEditing { return YES; }
+
+- (void)dealloc {
+  [_view release];
+  _view = nil;
+  [super dealloc];
+}
+
 @end
+#endif
 
 @implementation NSObject (XP_WebOpenPanel)
 -(void)XP_chooseFilenames:(NSArray *)filenames {
@@ -221,15 +294,6 @@ BOOL createRecursiveDirectory(NSString * path)
       [self performSelector:@selector(chooseFilename:) withObject:first];
     }
   }
-}
-@end
-
-@implementation NSRunningApplication
-+ (NSArray *)runningApplicationsWithBundleIdentifier:(NSString *)bundleIdentifier;
-{
-  // 10.6+ only — return empty on Tiger to allow caller to launch the app
-  (void)bundleIdentifier;
-  return [NSArray array];
 }
 @end
 
@@ -286,6 +350,12 @@ BOOL createRecursiveDirectory(NSString * path)
 }
 @end
 
+@implementation NSThread (XP_Compatibility)
++ (BOOL)XP_isMainThread {
+  return pthread_main_np() != 0;
+}
+@end
+
 // Tiger (10.4): NSObject performSelector:onThread:withObject:waitUntilDone: is 10.5+ only.
 // The target thread must have stored [NSRunLoop currentRunLoop] under @"_XPRunLoop"
 // in its [[NSThread currentThread] threadDictionary] before the first call.
@@ -311,80 +381,5 @@ BOOL createRecursiveDirectory(NSString * path)
 -(void)XP_performSelector:(SEL)aSelector onThread:(NSThread *)thr withObject:(id)arg waitUntilDone:(BOOL)wait modes:(NSArray *)array;
 {
   [self XP_performSelector:aSelector onThread:thr withObject:arg waitUntilDone:wait];
-}
-@end
-
-@implementation NSTableColumn (XP_Compatibility)
--(void)XP_setHidden:(BOOL)hidden {
-  if ([self respondsToSelector:@selector(setHidden:)])
-    [self setHidden:hidden];
-}
--(BOOL)XP_isHidden {
-  if ([self respondsToSelector:@selector(isHidden)])
-    return [self isHidden];
-  return NO;
-}
-@end
-
-@implementation NSThread (XP_Compatibility)
-+ (BOOL)XP_isMainThread {
-  return pthread_main_np() != 0;
-}
-@end
-
-@implementation NSString (XP_IntegerValue)
--(NSInteger)XP_integerValue { return (NSInteger)[self intValue]; }
--(NSUInteger)XP_unsignedIntegerValue { return (NSUInteger)strtoul([self UTF8String], NULL, 10); }
-@end
-
-#if MAC_OS_X_VERSION_MAX_ALLOWED < 1060
-@implementation XPViewController
-
-- (id)initWithNibName:(NSString *)nibName bundle:(NSBundle *)bundle {
-  (void)nibName; (void)bundle;
-  return [super init];
-}
-
-- (NSView *)view {
-  if (!_view) [self loadView];
-  return _view;
-}
-
-- (void)setView:(NSView *)view {
-  if (_view != view) {
-    [_view release];
-    _view = [view retain];
-  }
-}
-
-- (void)loadView {}
-- (void)viewWillAppear {}
-- (BOOL)commitEditing { return YES; }
-
-- (void)dealloc {
-  [_view release];
-  _view = nil;
-  [super dealloc];
-}
-
-@end
-#endif
-
-@implementation NSNumber (XP_Compatibility)
-+(NSNumber *)XP_numberWithInteger:(NSInteger)value;
-{
-	return [NSNumber numberWithInt:(int)value];
-}
-+(NSNumber *)XP_numberWithUnsignedInteger:(NSUInteger)value;
-{
-	return [NSNumber numberWithUnsignedInt:(unsigned int)value];
-}
--(NSInteger)XP_integerValue;
-{
-	return (NSInteger)[self intValue];
-}
--(NSUInteger)XP_unsignedIntegerValue;
-{
-	return (NSUInteger)[self unsignedIntValue];
 }
 @end

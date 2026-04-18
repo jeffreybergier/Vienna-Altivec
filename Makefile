@@ -194,7 +194,7 @@ CFLAGS_BASE = $(OPT_FLAGS) \
   -I$(THIRDPARTY_DIR)/DSClickableURLTextField \
   -I$(THIRDPARTY_DIR)/VTPG \
   -I$(CURL_DIR)/include \
-  -F$(META_DIR)/resources -F$(BUILD_DIR)/Frameworks \
+  -F$(META_DIR)/resources \
   -D"HAVE_USLEEP=1" -D"SQLITE_THREADSAFE=0" -D"SQLITE_WITHOUT_ZONEMALLOC=1" \
   -fno-stack-protector -fno-common -fno-zero-initialized-in-bss
 
@@ -216,7 +216,7 @@ CURL_LIBS = \
   $(CURL_DIR)/lib/libz.a
 
 LDFLAGS_BASE = \
-  -F$(META_DIR)/resources -F$(BUILD_DIR)/Frameworks \
+  -F$(META_DIR)/resources \
   -framework AppKit -framework Foundation -framework WebKit \
   -framework Carbon -framework CoreServices -framework Security -framework IOKit \
   -framework SystemConfiguration -framework ApplicationServices \
@@ -241,8 +241,8 @@ check:
 		exit 1; \
 	fi
 
-stage:
-	@rm -rf build build-debug build-release build-stage
+stage: clean
+	@rm -rf build-stage
 	@bash $(SRC_DIR)/scripts/stage.sh
 
 patches:
@@ -310,7 +310,7 @@ package: $(BUNDLE)
 	@cd $(BUILD_DIR) && zip -q -r $(APP_NAME).zip $(APP_NAME).app
 
 clean:
-	rm -rf build build-debug build-release
+	rm -rf build-stage build-debug build-release
 
 # --- Linking ---
 $(BUNDLE)/Contents/MacOS/$(APP_NAME): $(INT_DIR)/ppc.bin $(INT_DIR)/i386.bin

@@ -20,3 +20,22 @@
  	// Delegate will get didFail + didFinish messages (if set)
  	id delegate;
  
+@@ -79,12 +88,17 @@
+ - (void)reset;
+ 
+ // Used internally to manage HEAD requests when showAccurateProgress is YES, do not use!
+-- (void)addHEADOperation:(NSOperation *)operation;
++- (void)addHEADOperation:(id)operation;
+ 
+ // All ASINetworkQueues are paused when created so that total size can be calculated before the queue starts
+ // This method will start the queue
+ - (void)go;
+ 
++- (void)setMaxConcurrentOperationCount:(NSInteger)count;
++- (NSArray *)operations;
++- (void)cancelAllOperations;
++- (void)addOperation:(id)operation;
++
+ @property (assign, nonatomic, setter=setUploadProgressDelegate:) id uploadProgressDelegate;
+ @property (assign, nonatomic, setter=setDownloadProgressDelegate:) id downloadProgressDelegate;
+ 

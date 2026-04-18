@@ -36,23 +36,25 @@
  /* init
   * Class instance initialisation.
   */
-@@ -198,14 +198,8 @@
+@@ -197,17 +197,6 @@
+  */
  -(void)awakeFromNib
  {
- 
+-
 -#if ( MAC_OS_X_VERSION_MAX_ALLOWED < 1070 && !defined(NSWindowCollectionBehaviorFullScreenPrimary) )
 -    enum {
 -        NSWindowCollectionBehaviorFullScreenPrimary = (1 << 7)
 -    };
 -#endif
 -	
-     //Enable FullScreen Support if we are on Lion 10.7.x
+-    //Enable FullScreen Support if we are on Lion 10.7.x
 -    [mainWindow setCollectionBehavior:NSWindowCollectionBehaviorFullScreenPrimary];
-+    [mainWindow XP_setCollectionBehavior:NSWindowCollectionBehaviorFullScreenPrimary];
-   	
- 
+-  	
+-
  	Preferences * prefs = [Preferences standardPreferences];
-@@ -509,8 +503,8 @@
+ 	
+ 	// Restore the most recent layout
+@@ -509,8 +498,8 @@
  	[mainWindow setToolbar:toolbar];
  	
  	// Give the status bar and filter string an embossed look
@@ -63,7 +65,7 @@
  	[currentFilterTextField setStringValue:@""];
  	
  	// Preload dictionary of standard URLs
-@@ -569,23 +563,6 @@
+@@ -569,23 +558,6 @@
  	// Add the app to the status bar if needed.
  	[self showAppInStatusBar];
  	
@@ -87,7 +89,7 @@
  	// Start the check timer
  	[self handleCheckFrequencyChange:nil];
  	
-@@ -604,10 +581,6 @@
+@@ -604,10 +576,6 @@
  	// Hook up the key sequence properly now that all NIBs are loaded.
  	[[foldersTree mainView] setNextKeyView:[[browserView primaryTabItemView] mainView]];
  	
@@ -98,7 +100,7 @@
  
  	// Do safe initialisation.
  	[self performSelector:@selector(doSafeInitialisation)
-@@ -721,7 +694,7 @@
+@@ -721,7 +689,7 @@
  		[activityWindow performClose:self];
  		
  		// Put back the original app icon
@@ -107,7 +109,7 @@
  		
  		// Save the open tabs
  		[browserView saveOpenTabs];
-@@ -832,7 +805,7 @@
+@@ -832,7 +800,7 @@
  	
  	if (![fileManager fileExistsAtPath:path isDirectory:&isDir])
  	{
@@ -116,7 +118,7 @@
  		{
  			runOKAlertPanel(NSLocalizedString(@"Cannot create folder title", nil), NSLocalizedString(@"Cannot create folder body", nil), path);
  			return NO;
-@@ -1120,7 +1093,7 @@
+@@ -1120,7 +1088,7 @@
  	{
          modifiedDateString = [dateString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
      	modifiedDateString = [modifiedDateString
@@ -125,7 +127,7 @@
                              options:0 range:NSMakeRange(20,modifiedDateString.length-20)];
      }
      else
-@@ -1718,16 +1691,7 @@
+@@ -1718,16 +1686,7 @@
   */
  -(void)growlNotify:(id)notifyContext title:(NSString *)title description:(NSString *)description notificationName:(NSString *)notificationName
  {
@@ -143,7 +145,7 @@
  }
  
  /* growlNotificationWasClicked
-@@ -2017,7 +1981,7 @@
+@@ -2017,7 +1976,7 @@
  		& MA_NewArticlesNotification_Badge) == 0)
  	{
  		// Remove the badge if there was one.
@@ -152,7 +154,7 @@
  	}
  	else
  	{
-@@ -2031,32 +1995,32 @@
+@@ -2031,32 +1990,32 @@
   */
  -(void)showUnreadCountOnApplicationIconAndWindowTitle
  {
@@ -195,7 +197,7 @@
  
  	} // @synchronized
  }
-@@ -2897,10 +2861,10 @@
+@@ -2897,10 +2856,10 @@
  	}
  	
  	// Create then select the new folder.
@@ -210,7 +212,7 @@
  	
  	
  	if (folderId != -1)
-@@ -2947,10 +2911,10 @@
+@@ -2947,10 +2906,10 @@
  	}
  	else
  	{ //creates locally
@@ -225,7 +227,7 @@
  
  		if (folderId != -1)
  		{
-@@ -3497,7 +3461,7 @@
+@@ -3497,7 +3456,7 @@
  	NSString * pathToAckFile = [thisBundle pathForResource:@"Acknowledgements" ofType:@"html"];
  	if (pathToAckFile != nil)
  	{
@@ -234,7 +236,7 @@
  	}
  }
  
-@@ -4349,7 +4313,7 @@
+@@ -4349,7 +4308,7 @@
  	else if (theAction == @selector(doSortDirection:))
  	{
  		NSNumber * ascendingNumber = [menuItem representedObject];
@@ -243,7 +245,7 @@
  		if (ascending == [articleController sortIsAscending])
  			[menuItem setState:NSOnState];
  		else
-@@ -4760,36 +4724,6 @@
+@@ -4760,36 +4719,6 @@
  			 nil];
  }
  

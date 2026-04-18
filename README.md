@@ -4,8 +4,10 @@
 |--|--|
 |[![Vienna Screenshot 1](./README/README.1.thumb.png)](./README/README.1.png)|[![Vienna Screenshot 2](./README/README.2.thumb.png)](./README/README.2.png)|
 
-[Vienna 3](https://github.com/ViennaRSS/vienna-rss) is the first version of 
-Vienna that supports syncing with any online services like 
+## About
+
+[Vienna 3](https://github.com/ViennaRSS/vienna-rss) is the first version of the 
+RSS reader that supports syncing with any online services like 
 [The Old Reader](https://theoldreader.com). However, 3.0.x+ requires Mac OS X
 10.6 Snow Leopard and later. I wanted this backport so I could use an RSS
 reader with The Old Reader syncing for my iMac G4 which cannot run Snow Leopard.
@@ -18,7 +20,7 @@ legacy version of Mac OS X you are running.
 This backport project is powered by [Altivec Intelligence](https://github.com/jeffreybergier/AltivecIntelligence) 
 to allow easy cross-compiling for Mac OS X Tiger.
 
-## What's different from upstream
+### Technical Details
 
 | Area | Change |
 |---|---|
@@ -29,9 +31,21 @@ to allow easy cross-compiling for Mac OS X Tiger.
 | Dependencies | `PSMTabBarControl` bundled as a `.framework`; `JSONKit`, `SQLite`, `libcurl`, `libssl`, `libz` statically linked |
 | Compatibility shims | Runtime-checked API bridges centralized in `src/custom/CrossPlatform.{h,m}` and injected via `-include` |
 
-Sync with Google Reader-compatible services (TheOldReader, FreshRSS, etc.) is functional.
+### Known Issues
 
-## Repository layout
+- Networking and/or Database activity happens on main thread so usually beachballs when syncing
+- Copy and Paste do not work (this is bizarre)
+- WebView uses system networking, not libcurl
+
+### ToDo List
+
+- [ ] Investigate beachball on sync
+- [ ] Convert nib files to code
+- [ ] Add x86_64 and arm64 builds
+
+## For Developers
+
+### Repository layout
 
 ```
 vienna/            git submodule — upstream source, NEVER modified
@@ -46,7 +60,7 @@ build-stage/       generated staging area (patched copies) — do not edit in pl
 altivec/           toolchain submodule (osxcross, libcurl, deploy script)
 ```
 
-## Prerequisites
+### Prerequisites
 
 You do **not** need a Mac. The build runs inside a Docker container that
 ships a full [osxcross](https://github.com/tpoechtrager/osxcross) toolchain
@@ -56,7 +70,7 @@ targeting the 10.5 SDK with a 10.4 deployment target.
 - `git` with submodule support
 - ~5 GB free disk for the toolchain image
 
-## First-time setup
+### First-time setup
 
 ```bash
 git clone git@github.com:jeffreybergier/Vienna-Altivec.git
@@ -66,7 +80,7 @@ docker compose build # 5-20 min
 docker compose run --rm altivec "cd ./altivec/libs/libcurl && make mac" # 5-90 min
 ```
 
-## Building
+### Building
 
 All build commands run inside the container. The below command makes a release
 build.
@@ -89,7 +103,7 @@ make patches        # updates patch files based on changes in build-stage
 make clean          # wipe build artifacts
 ```
 
-## Deploying to a real Mac
+### Deploying to a real Mac
 
 If you have a vintage Mac accessible over SSH, the helper script copies
 the built bundle and launches it:
@@ -100,9 +114,9 @@ the built bundle and launches it:
 
 Replace `<ssh-host>` with the host alias in your `~/.ssh/config`.
 
-## Editing workflow
+### Editing workflow
 
-### Changing a file in `vienna/` or `deps/` (patch workflow)
+#### Changing a file in `vienna/` or `deps/` (patch workflow)
 
 `build-stage/` is regenerated on every `make stage`, so changes there are
 ephemeral until you run `make patches` to persist them as unified diffs.
@@ -114,7 +128,7 @@ make patches                            # diff build-stage/ back into patches/
 make debug
 ```
 
-### Changing a file in `src/`
+#### Changing a file in `src/`
 
 ```bash
 $EDITOR src/custom/CrossPlatform.m
@@ -123,7 +137,7 @@ make debug
 
 No staging step needed — `src/` files are compiled directly.
 
-## Common pitfalls
+### Common pitfalls
 
 - **Forgetting `make patches` after editing `build-stage/`** — changes are lost on the next `make stage`.
 - **Editing `build-stage/` before running `make stage`** — the directory may be empty or out of date.
