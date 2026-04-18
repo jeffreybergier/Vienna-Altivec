@@ -1,20 +1,6 @@
---- vienna/XMLSourceWindow.m	2026-04-07 10:53:55.919054508 +0000
-+++ vienna/XMLSourceWindow.m	2026-04-07 11:10:03.284726397 +0000
-@@ -60,7 +60,7 @@
- 	NSString * pathToSyntaxHighlighter = [[NSBundle bundleForClass:[self class]] pathForResource:@"XMLSyntaxHighlighter" ofType:@"html"];
- 	if (pathToSyntaxHighlighter != nil)
- 	{
--		NSString *syntaxHighlighter = [NSString stringWithContentsOfFile:pathToSyntaxHighlighter encoding:NSUTF8StringEncoding error:NULL];
-+		NSString *syntaxHighlighter = [NSString stringWithContentsOfFile:pathToSyntaxHighlighter];
- 		if (syntaxHighlighter != nil)
- 		{
- 			NSString * errorDescription = nil;
-@@ -73,17 +73,17 @@
- 			{
- 				NSStringEncoding encoding;
- 				NSError * error;
--				NSString * xmlSource = [NSString stringWithContentsOfFile:feedSourceFilePath usedEncoding:&encoding error:&error];
-+				NSString * xmlSource = [NSString stringWithContentsOfFile:feedSourceFilePath];
+--- vienna/XMLSourceWindow.m
++++ vienna/XMLSourceWindow.m
+@@ -77,13 +77,13 @@
  				if (xmlSource != nil)
  				{
  					// Get rid of potential body, script, CDATA and other tags within the string that may cause a mess.
@@ -43,10 +29,3 @@
  		}
  	}	
  }
-@@ -161,4 +161,4 @@
- 	[super dealloc];
- }
- 
--@end
-\ No newline at end of file
-+@end

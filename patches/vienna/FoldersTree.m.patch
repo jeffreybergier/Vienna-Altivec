@@ -1,66 +1,326 @@
 --- vienna/FoldersTree.m
 +++ vienna/FoldersTree.m
-@@ -23,7 +23,6 @@
- #import "AppController.h"
- #import "Constants.h"
- #import "Preferences.h"
--#import "HelperFunctions.h"
- #import "StringExtensions.h"
- #import "FolderView.h"
- #import "PopupButton.h"
-@@ -243,10 +242,11 @@
-  */
- -(void)unarchiveState:(NSArray *)stateArray
- {
--	for (NSDictionary * dict in stateArray)
-+	NSEnumerator * enum_dict = [stateArray objectEnumerator];
-+	NSDictionary * dict;
-+	while ((dict = [enum_dict nextObject]))
- 	{
--		int folderId = [[dict valueForKey:@"NodeID"] intValue];
--		TreeNode * node = [rootNode nodeFromID:folderId];
-+		int folderId = [[dict valueForKey:@"NodeID"] intValue];		TreeNode * node = [rootNode nodeFromID:folderId];
- 		if (node != nil)
- 		{
- 			BOOL doExpandItem = [[dict valueForKey:@"ExpandedState"] boolValue];
-@@ -275,10 +275,10 @@
- 	Folder * folder;
- 	if ([[Preferences standardPreferences] foldersTreeSortMethod] != MA_FolderSort_Manual)
- 	{
--		for (folder in listOfFolders)
-+		NSEnumerator * enum_folder = [listOfFolders objectEnumerator];
-+		while ((folder = [enum_folder nextObject]))
- 		{
--			int itemId = [folder itemId];
--			NSArray * listOfSubFolders = [[Database sharedDatabase] arrayOfFolders:itemId];
-+			int itemId = [folder itemId];			NSArray * listOfSubFolders = [[Database sharedDatabase] arrayOfFolders:itemId];
- 			int count = [listOfSubFolders count];
- 			TreeNode * subNode;
+@@ -92,7 +92,7 @@
  
-@@ -342,7 +342,7 @@
- 		node = rootNode;
- 	else
- 		node = [rootNode nodeFromID:folderId];
--	if ([node folder] != nil && IsRSSFolder([node folder]))
-+	if ([node folder] != nil && (IsRSSFolder([node folder]) || IsGoogleReaderFolder([node folder])))
- 		[array addObject:[node folder]];
- 	node = [node firstChild];
- 	while (node != nil)
-@@ -1150,7 +1150,7 @@
- 			[stringDragData appendString:feedURL];
- 			[stringDragData appendString:@"\n"];
- 			
--			NSURL * safariURL = [NSURL URLWithString:feedURL];
-+			NSURL * safariURL = [NSURL XP_URLWithString:feedURL];
- 			if (safariURL != nil && ![safariURL isFileURL])
- 			{
- 				if (![@"feed" isEqualToString:[safariURL scheme]])
-@@ -1441,7 +1441,7 @@
- 			[db beginTransaction];
- 			NSString * feedTitle = [arrayOfTitles objectAtIndex:index];
- 			NSString * feedURL = [arrayOfURLs objectAtIndex:index];
+ 	// Folder image
+ 	folderErrorImage = [NSImage imageNamed:@"folderError.tiff"];
+-    folderErrorImage.accessibilityDescription = NSLocalizedString(@"Error", nil);
++    // folderErrorImage.accessibilityDescription = NSLocalizedString(@"Error", nil); // 10.7+ API
+ 	refreshProgressImage = [NSImage imageNamed:@"refreshProgress.tiff"];
+ 	
+ 	// Create and set whatever font we're using for the folders
+@@ -624,9 +624,9 @@
+ 	if ([[Preferences standardPreferences] foldersTreeSortMethod] == MA_FolderSort_Manual)
+ 	{
+ 		Database * db = [Database sharedDatabase];
+-		[db doTransactionWithBlock:^(BOOL *rollback) {
+-		[self setManualSortOrderForNode:rootNode];
+-		}]; //end transaction block
++		[db beginTransaction];
++	[self setManualSortOrderForNode:rootNode];
++		[db commitTransaction];
+ 	}
+ 	
+ 	blockSelectionHandler = YES;
+@@ -1029,7 +1029,7 @@
+ -(void)enableFoldersRenamingAfterDelay
+ {
+ 	canRenameFolders = NO;
+-	[NSTimer scheduledTimerWithTimeInterval:[NSEvent doubleClickInterval] target:self selector:@selector(enableFoldersRenaming:) userInfo:nil repeats:NO];
++	[NSTimer scheduledTimerWithTimeInterval:0.5 target:self selector:@selector(enableFoldersRenaming:) userInfo:nil repeats:NO];
+ }
+ 
+ /* outlineViewWillBecomeFirstResponder
+@@ -1204,7 +1204,7 @@
+ {
+ 	NSAssert(([array count] % 3) == 0, @"Incorrect number of items in array passed to moveFolders");
+ 	int count = [array count];
+-	__block int index = 0;
++	int index = 0;
+ 
+ 	// Need to create a running undo array
+ 	NSMutableArray * undoArray = [[NSMutableArray alloc] initWithCapacity:count];
+@@ -1215,100 +1215,100 @@
+ 	Database * db = [Database sharedDatabase];
+ 	BOOL autoSort = [[Preferences standardPreferences] foldersTreeSortMethod] != MA_FolderSort_Manual;
+ 
+-	[db doTransactionWithBlock:^(BOOL *rollback) {
++	[db beginTransaction];
+ 	while (index < count)
+ 	{
+-		int folderId = [[array objectAtIndex:index++] intValue];
+-		int newParentId = [[array objectAtIndex:index++] intValue];
+-		int newPredecessorId = [[array objectAtIndex:index++] intValue];
+-		Folder * folder = [db folderFromID:folderId];
+-		int oldParentId = [folder parentId];
+-		
+-		TreeNode * node = [rootNode nodeFromID:folderId];
+-		TreeNode * oldParent = [rootNode nodeFromID:oldParentId];
+-		int oldChildIndex = [oldParent indexOfChild:node];
+-		int oldPredecessorId = (oldChildIndex > 0) ? [[oldParent childByIndex:(oldChildIndex - 1)] nodeId] : 0;
+-		TreeNode * newParent = [rootNode nodeFromID:newParentId];
+-		TreeNode * newPredecessor = [newParent nodeFromID:newPredecessorId];
+-		if ((newPredecessor == nil) || (newPredecessor == newParent))
+-			newPredecessorId = 0;
+-		int newChildIndex = (newPredecessorId > 0) ? ([newParent indexOfChild:newPredecessor] + 1) : 0;
+-        
+-		if (newParentId == oldParentId)
++	int folderId = [[array objectAtIndex:index++] intValue];
++	int newParentId = [[array objectAtIndex:index++] intValue];
++	int newPredecessorId = [[array objectAtIndex:index++] intValue];
++	Folder * folder = [db folderFromID:folderId];
++	int oldParentId = [folder parentId];
++	
++	TreeNode * node = [rootNode nodeFromID:folderId];
++	TreeNode * oldParent = [rootNode nodeFromID:oldParentId];
++	int oldChildIndex = [oldParent indexOfChild:node];
++	int oldPredecessorId = (oldChildIndex > 0) ? [[oldParent childByIndex:(oldChildIndex - 1)] nodeId] : 0;
++	TreeNode * newParent = [rootNode nodeFromID:newParentId];
++	TreeNode * newPredecessor = [newParent nodeFromID:newPredecessorId];
++	if ((newPredecessor == nil) || (newPredecessor == newParent))
++		newPredecessorId = 0;
++	int newChildIndex = (newPredecessorId > 0) ? ([newParent indexOfChild:newPredecessor] + 1) : 0;
++    
++	if (newParentId == oldParentId)
++	{
++		// With automatic sorting, moving under the same parent is impossible.
++		if (autoSort)
++			continue;
++		// No need to move if destination is the same as origin.
++		if (newPredecessorId == oldPredecessorId)
++			continue;
++		// Adjust the index for the removal of the old child.
++		if (newChildIndex > oldChildIndex)
++			--newChildIndex;
++	}
++	else
++	{
++		if (![newParent canHaveChildren])
++			[newParent setCanHaveChildren:YES];
++		if ([db setParent:newParentId forFolder:folderId])
+ 		{
+-			// With automatic sorting, moving under the same parent is impossible.
+-			if (autoSort)
+-				continue;
+-			// No need to move if destination is the same as origin.
+-			if (newPredecessorId == oldPredecessorId)
++			if (IsGoogleReaderFolder(folder))
++			{
++				GoogleReader * myGoogle = [GoogleReader sharedManager];
++				// remove old label
++				NSString * folderName = [[db folderFromID:oldParentId] name];
++				[myGoogle setFolderName:folderName forFeed:[folder feedURL] set:FALSE];
++				// add new label
++				folderName = [[db folderFromID:newParentId] name];
++				[myGoogle setFolderName:folderName forFeed:[folder feedURL] set:TRUE];
++			}
++		}
++		else
++			continue;
++	}
++	
++	if (!autoSort)
++	{
++		if (oldPredecessorId > 0)
++		{
++			if (![db setNextSibling:[folder nextSiblingId] forFolder:oldPredecessorId])
+ 				continue;
+-			// Adjust the index for the removal of the old child.
+-			if (newChildIndex > oldChildIndex)
+-				--newChildIndex;
+ 		}
+ 		else
+ 		{
+-			if (![newParent canHaveChildren])
+-				[newParent setCanHaveChildren:YES];
+-			if ([db setParent:newParentId forFolder:folderId])
+-			{
+-				if (IsGoogleReaderFolder(folder))
+-				{
+-					GoogleReader * myGoogle = [GoogleReader sharedManager];
+-					// remove old label
+-					NSString * folderName = [[db folderFromID:oldParentId] name];
+-					[myGoogle setFolderName:folderName forFeed:[folder feedURL] set:FALSE];
+-					// add new label
+-					folderName = [[db folderFromID:newParentId] name];
+-					[myGoogle setFolderName:folderName forFeed:[folder feedURL] set:TRUE];
+-				}
+-			}
+-			else
++			if (![db setFirstChild:[folder nextSiblingId] forFolder:oldParentId])
+ 				continue;
+ 		}
+-		
+-		if (!autoSort)
++	}
++	
++	[node retain];
++	[oldParent removeChild:node andChildren:NO];
++	[newParent addChild:node atIndex:newChildIndex];
++	[node release];
++	
++	// Put at beginning of undoArray in order to undo moves in reverse order.
++	[undoArray insertObject:[NSNumber numberWithInt:folderId] atIndex:0u];
++	[undoArray insertObject:[NSNumber numberWithInt:oldParentId] atIndex:1u];
++	[undoArray insertObject:[NSNumber numberWithInt:oldPredecessorId] atIndex:2u];
++	
++	if (!autoSort)
++	{
++		if (newPredecessorId > 0)
+ 		{
+-			if (oldPredecessorId > 0)
+-			{
+-				if (![db setNextSibling:[folder nextSiblingId] forFolder:oldPredecessorId])
+-					continue;
+-			}
+-			else
+-			{
+-				if (![db setFirstChild:[folder nextSiblingId] forFolder:oldParentId])
+-					continue;
+-			}
++			if (![db setNextSibling:[[db folderFromID:newPredecessorId] nextSiblingId] forFolder:folderId])
++				continue;
++			[db setNextSibling:folderId forFolder:newPredecessorId];
+ 		}
+-		
+-		[node retain];
+-		[oldParent removeChild:node andChildren:NO];
+-		[newParent addChild:node atIndex:newChildIndex];
+-		[node release];
+-		
+-		// Put at beginning of undoArray in order to undo moves in reverse order.
+-		[undoArray insertObject:[NSNumber numberWithInt:folderId] atIndex:0u];
+-		[undoArray insertObject:[NSNumber numberWithInt:oldParentId] atIndex:1u];
+-		[undoArray insertObject:[NSNumber numberWithInt:oldPredecessorId] atIndex:2u];
+-		
+-		if (!autoSort)
++		else
+ 		{
+-			if (newPredecessorId > 0)
+-			{
+-				if (![db setNextSibling:[[db folderFromID:newPredecessorId] nextSiblingId] forFolder:folderId])
+-					continue;
+-				[db setNextSibling:folderId forFolder:newPredecessorId];
+-			}
+-			else
+-			{
+-				int oldFirstChildId = (newParent == rootNode) ? [db firstFolderId] : [[newParent folder] firstChildId];
+-				if (![db setNextSibling:oldFirstChildId forFolder:folderId])
+-					continue;
+-				[db setFirstChild:folderId forFolder:newParentId];
+-			}
++			int oldFirstChildId = (newParent == rootNode) ? [db firstFolderId] : [[newParent folder] firstChildId];
++			if (![db setNextSibling:oldFirstChildId forFolder:folderId])
++				continue;
++			[db setFirstChild:folderId forFolder:newParentId];
+ 		}
+ 	}
+-	}]; //end transaction block
++	}
++	[db commitTransaction];
+ 	
+ 	// If undo array is empty, then nothing has been moved.
+ 	if ([undoArray count] == 0u)
+@@ -1360,7 +1360,7 @@
+  */
+ -(BOOL)outlineView:(NSOutlineView *)olv acceptDrop:(id <NSDraggingInfo>)info item:(id)targetItem childIndex:(int)child
+ { 
+-	__block int childIndex = child;
++	int childIndex = child;
+ 	NSPasteboard * pb = [info draggingPasteboard];
+ 	NSString * type = [pb availableTypeFromArray:[NSArray arrayWithObjects:MA_PBoardType_FolderList, MA_PBoardType_RSSSource, @"WebURLsWithTitlesPboardType", NSStringPboardType, nil]];
+ 	TreeNode * node = targetItem ? (TreeNode *)targetItem : rootNode;
+@@ -1420,29 +1420,29 @@
+ 		// This is an RSS drag using the protocol defined by Ranchero for NetNewsWire. See
+ 		// http://ranchero.com/netnewswire/rssclipboard.php for more details.
+ 		//
+-		__block int folderToSelect = -1;
++		int folderToSelect = -1;
+ 		for (index = 0; index < count; ++index)
+ 		{
+-			[db doTransactionWithBlock:^(BOOL *rollback) {
+-			NSDictionary * sourceItem = [arrayOfSources objectAtIndex:index];
+-			NSString * feedTitle = [sourceItem valueForKey:@"sourceName"];
+-			NSString * feedHomePage = [sourceItem valueForKey:@"sourceHomeURL"];
+-			NSString * feedURL = [sourceItem valueForKey:@"sourceRSSURL"];
+-			NSString * feedDescription = [sourceItem valueForKey:@"sourceDescription"];
+-
+-			if ((feedURL != nil) && [db folderFromFeedURL:feedURL] == nil)
+-			{
+-				int predecessorId = (childIndex > 0) ? [[node childByIndex:(childIndex - 1)] nodeId] : 0;
+-				int folderId = [db addRSSFolder:feedTitle underParent:parentId afterChild:predecessorId subscriptionURL:feedURL];
+-				if (feedDescription != nil)
+-					[db setFolderDescription:folderId newDescription:feedDescription];
+-				if (feedHomePage != nil)
+-					[db setFolderHomePage:folderId newHomePage:feedHomePage];
+-				if (folderId > 0)
+-					folderToSelect = folderId;
+-				++childIndex;
+-			}
+-			}]; //end transaction block
++			[db beginTransaction];
++		NSDictionary * sourceItem = [arrayOfSources objectAtIndex:index];
++		NSString * feedTitle = [sourceItem valueForKey:@"sourceName"];
++		NSString * feedHomePage = [sourceItem valueForKey:@"sourceHomeURL"];
++		NSString * feedURL = [sourceItem valueForKey:@"sourceRSSURL"];
++		NSString * feedDescription = [sourceItem valueForKey:@"sourceDescription"];
++
++		if ((feedURL != nil) && [db folderFromFeedURL:feedURL] == nil)
++		{
++			int predecessorId = (childIndex > 0) ? [[node childByIndex:(childIndex - 1)] nodeId] : 0;
++			int folderId = [db addRSSFolder:feedTitle underParent:parentId afterChild:predecessorId subscriptionURL:feedURL];
++			if (feedDescription != nil)
++				[db setFolderDescription:folderId newDescription:feedDescription];
++			if (feedHomePage != nil)
++				[db setFolderHomePage:folderId newHomePage:feedHomePage];
++			if (folderId > 0)
++				folderToSelect = folderId;
++			++childIndex;
++		}
++			[db commitTransaction];
+ 		}
+ 
+ 		// If parent was a group, expand it now
+@@ -1464,25 +1464,25 @@
+ 		int count = [arrayOfURLs count];
+ 		int index;
+ 		
+-		__block int folderToSelect = -1;
++		int folderToSelect = -1;
+ 		for (index = 0; index < count; ++index)
+ 		{
+-			[db doTransactionWithBlock:^(BOOL *rollback) {
+-			NSString * feedTitle = [arrayOfTitles objectAtIndex:index];
+-			NSString * feedURL = [arrayOfURLs objectAtIndex:index];
 -			NSURL * draggedURL = [NSURL URLWithString:feedURL];
-+			NSURL * draggedURL = [NSURL XP_URLWithString:feedURL];
- 			if (([draggedURL scheme] != nil) && [[draggedURL scheme] isEqualToString:@"feed"])
- 				feedURL = [NSString stringWithFormat:@"http:%@", [draggedURL resourceSpecifier]];
- 			
+-			if (([draggedURL scheme] != nil) && [[draggedURL scheme] isEqualToString:@"feed"])
+-				feedURL = [NSString stringWithFormat:@"http:%@", [draggedURL resourceSpecifier]];
+-			
+-			if ([db folderFromFeedURL:feedURL] == nil)
+-			{
+-				int predecessorId = (childIndex > 0) ? [[node childByIndex:(childIndex - 1)] nodeId] : 0;
+-				int newFolderId = [db addRSSFolder:feedTitle underParent:parentId afterChild:predecessorId subscriptionURL:feedURL];
+-				if (newFolderId > 0)
+-					folderToSelect = newFolderId;
+-				++childIndex;
+-			}
+-			}]; //end transaction block
++			[db beginTransaction];
++		NSString * feedTitle = [arrayOfTitles objectAtIndex:index];
++		NSString * feedURL = [arrayOfURLs objectAtIndex:index];
++		NSURL * draggedURL = [NSURL URLWithString:feedURL];
++		if (([draggedURL scheme] != nil) && [[draggedURL scheme] isEqualToString:@"feed"])
++			feedURL = [NSString stringWithFormat:@"http:%@", [draggedURL resourceSpecifier]];
++		
++		if ([db folderFromFeedURL:feedURL] == nil)
++		{
++			int predecessorId = (childIndex > 0) ? [[node childByIndex:(childIndex - 1)] nodeId] : 0;
++			int newFolderId = [db addRSSFolder:feedTitle underParent:parentId afterChild:predecessorId subscriptionURL:feedURL];
++			if (newFolderId > 0)
++				folderToSelect = newFolderId;
++			++childIndex;
++		}
++			[db commitTransaction];
+ 		}
+ 		
+ 		// If parent was a group, expand it now

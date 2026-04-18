@@ -1,9 +1,36 @@
---- vienna/ImageAndTextCell.m	2026-04-07 10:53:55.846896504 +0000
-+++ vienna/ImageAndTextCell.m	2026-04-07 13:11:21.534411245 +0000
-@@ -326,4 +326,4 @@
- 	[super dealloc];
- }
+--- vienna/ImageAndTextCell.m
++++ vienna/ImageAndTextCell.m
+@@ -181,7 +181,7 @@
+ 		// vertically center
+ 		imageFrame.origin.y += (cellFrame->size.height - imageSize.height) / 2.0;
+ 		
+-		[image drawInRect:imageFrame fromRect:NSZeroRect operation:NSCompositeSourceOver fraction:1.0f respectFlipped:YES hints:NULL];
++		[image XP_drawInRect:imageFrame fromRect:NSZeroRect operation:NSCompositeSourceOver fraction:1.0f respectFlipped:YES hints:NULL];
  
--@end
-\ No newline at end of file
-+@end
+ 	}
+ }
+@@ -242,7 +242,7 @@
+ 		// vertically center
+ 		imageFrame.origin.y += (cellFrame.size.height - imageSize.height) / 2.0;
+ 		
+-		[auxiliaryImage drawInRect:imageFrame fromRect:NSZeroRect operation:NSCompositeSourceOver fraction:1.0f respectFlipped:YES hints:NULL];
++		[auxiliaryImage XP_drawInRect:imageFrame fromRect:NSZeroRect operation:NSCompositeSourceOver fraction:1.0f respectFlipped:YES hints:NULL];
+ 
+ 	}
+ 	
+@@ -325,13 +325,12 @@
+     if ([attribute isEqualToString:NSAccessibilityDescriptionAttribute])
+     {
+         NSMutableArray * bits = [NSMutableArray arrayWithCapacity:3];
+-        if (auxiliaryImage && auxiliaryImage.accessibilityDescription)
+-            [bits addObject:auxiliaryImage.accessibilityDescription];
++        (void)auxiliaryImage; // accessibilityDescription is 10.7+ API, skip
+         if (hasCount)
+             [bits addObject:[NSString stringWithFormat:NSLocalizedString(@"%d unread articles", nil), count]];
+         if (inProgress)
+             [bits addObject:NSLocalizedString(@"Loading", nil)];
+-        if (bits.count)
++        if ([bits count])
+             return [bits componentsJoinedByString:@", "];
+     }
+     return [super accessibilityAttributeValue:attribute];

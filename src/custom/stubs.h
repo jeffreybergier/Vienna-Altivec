@@ -1,35 +1,56 @@
 #ifdef __OBJC__
 #import <Cocoa/Cocoa.h>
 
+// ---- Growl ----
+#define GROWL_APP_NAME                           @"ApplicationName"
+#define GROWL_NOTIFICATIONS_ALL                  @"AllNotifications"
+#define GROWL_NOTIFICATIONS_DEFAULT              @"DefaultNotifications"
+#define GROWL_NOTIFICATIONS_HUMAN_READABLE_NAMES @"HumanReadableNames"
+
 @protocol GrowlApplicationBridgeDelegate <NSObject>
+@optional
+- (NSDictionary *)registrationDictionaryForGrowl;
+- (void)growlNotificationWasClicked:(id)clickContext;
 @end
 
-// Growl Stubs
 @interface GrowlApplicationBridge : NSObject
-+(void)setGrowlDelegate:(NSObject<GrowlApplicationBridgeDelegate> *)delegate;
-+(void)notifyWithTitle:(NSString *)title description:(NSString *)description notificationName:(NSString *)notifName iconData:(NSData *)iconData priority:(float)priority isSticky:(BOOL)isSticky clickContext:(id)clickContext;
-+(void)notifyWithTitle:(NSString *)title description:(NSString *)description notificationName:(NSString *)notifName iconData:(NSData *)iconData priority:(float)priority isSticky:(BOOL)isSticky clickContext:(id)clickContext identifier:(NSString *)identifier;
-+(BOOL)isGrowlInstalled;
-+(BOOL)isGrowlRunning;
++ (void)setGrowlDelegate:(NSObject<GrowlApplicationBridgeDelegate> *)delegate;
++ (void)notifyWithTitle:(NSString *)title
+            description:(NSString *)description
+       notificationName:(NSString *)notifName
+               iconData:(NSData *)iconData
+               priority:(float)priority
+               isSticky:(BOOL)isSticky
+           clickContext:(id)clickContext;
++ (void)notifyWithTitle:(NSString *)title
+            description:(NSString *)description
+       notificationName:(NSString *)notifName
+               iconData:(NSData *)iconData
+               priority:(float)priority
+               isSticky:(BOOL)isSticky
+           clickContext:(id)clickContext
+             identifier:(NSString *)identifier;
++ (BOOL)isGrowlInstalled;
++ (BOOL)isGrowlRunning;
 @end
 
-#define GROWL_APP_NAME @"GrowlAppName"
-#define GROWL_NOTIFICATIONS_ALL @"GrowlAllNotifications"
-#define GROWL_NOTIFICATIONS_DEFAULT @"GrowlDefaultNotifications"
+// ---- Fast enumeration polyfill (Tiger / 10.4) ----
+// Injects countByEnumeratingWithState:objects:count: only when missing at runtime.
+@interface XPFastEnumerationInstaller : NSObject
+@end
 
-// Sparkle Stubs
+// ---- Sparkle ----
 #define SUUpdaterWillRestartNotification @"SUUpdaterWillRestartNotification"
 
 @interface SUUpdater : NSObject
--(void)checkForUpdates:(id)sender;
++ (SUUpdater *)sharedUpdater;
++ (SUUpdater *)updaterForBundle:(NSBundle *)bundle;
+- (void)checkForUpdates:(id)sender;
+- (void)setSendsSystemProfile:(BOOL)flag;
+- (BOOL)sendsSystemProfile;
+- (void)setAutomaticallyChecksForUpdates:(BOOL)flag;
+- (BOOL)automaticallyChecksForUpdates;
+- (void)setFeedURL:(NSURL *)feedURL;
 @end
-
-// 10.5 Compatibility Stubs
-#if MAC_OS_X_VERSION_MAX_ALLOWED < 1060
-@protocol NSMenuDelegate <NSObject>
-@end
-@protocol NSTabViewDelegate <NSObject>
-@end
-#endif
 
 #endif

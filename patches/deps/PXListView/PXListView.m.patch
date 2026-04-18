@@ -1,0 +1,13 @@
+--- PXListView.m
++++ PXListView.m
+@@ -15,6 +15,10 @@
+ 
+ NSString * const PXListViewSelectionDidChange = @"PXListViewSelectionDidChange";
+ 
++// Forward declaration for GCC 4.2 — extendedRange is defined later in this file
++@interface PXListView ()
++- (NSRange)extendedRange;
++@end
+ 
+ @implementation PXListView
+ 

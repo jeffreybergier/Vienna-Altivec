@@ -1,0 +1,45 @@
+--- vienna/Import.m
++++ vienna/Import.m
+@@ -32,14 +32,12 @@
+ -(IBAction)importSubscriptions:(id)sender
+ {
+ 	NSOpenPanel * panel = [NSOpenPanel openPanel];
+-	[panel beginSheetModalForWindow:mainWindow
+-			completionHandler: ^(NSInteger returnCode) {
+-		if (returnCode == NSOKButton)
+-		{
+-			[panel orderOut:self];
+-			[self importFromFile:[[panel URL] path]];
+-		}
+-	}];
++	NSInteger returnCode = [panel runModal];
++	if (returnCode == NSOKButton)
++	{
++		[panel orderOut:self];
++		[self importFromFile:[[panel URL] path]];
++	}
+ 	panel = nil;
+ }
+ 
+@@ -113,7 +111,7 @@
+ {
+ 	NSData * data = [NSData dataWithContentsOfFile:[importFileName stringByExpandingTildeInPath]];
+ 	BOOL hasError = NO;
+-	__block int countImported = 0;
++	int countImported = 0;
+ 
+ 	if (data != nil)
+ 	{
+@@ -128,9 +126,9 @@
+ 		else
+ 		{
+ 			XMLParser * bodyTree = [tree treeByPath:@"opml/body"];
+-			[db doTransactionWithBlock:^(BOOL *rollback) {
+-			countImported = [self importSubscriptionGroup:bodyTree underParent:MA_Root_Folder];
+-			}]; //end transaction block
++			[db beginTransaction];
++		countImported = [self importSubscriptionGroup:bodyTree underParent:MA_Root_Folder];
++			[db commitTransaction];
+ 		}
+ 		[tree release];
+ 	}

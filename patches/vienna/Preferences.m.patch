@@ -1,20 +1,96 @@
---- vienna/Preferences.m	2026-04-07 13:21:56.043927797 +0000
-+++ vienna/Preferences.m	2026-04-08 12:42:27.815618367 +0000
-@@ -22,7 +22,6 @@
+--- vienna/Preferences.m
++++ vienna/Preferences.m
+@@ -22,7 +22,7 @@
  #import "Constants.h"
- #import "Message.h"
+ #import "Article.h"
  #import "SearchMethod.h"
 -#import <Sparkle/Sparkle.h>
++// #import <Sparkle/Sparkle.h> — stubs.h pre-included
  
  // Initial paths
  NSString * MA_ApplicationSupportFolder = @"~/Library/Application Support/Vienna";
-@@ -1034,12 +1033,12 @@
+@@ -128,7 +128,7 @@
+ 			if (![fileManager fileExistsAtPath:profilePath isDirectory:&isDir])
+ 			{
+ 				NSError * error;
+-				if (![fileManager createDirectoryAtPath:profilePath withIntermediateDirectories:YES attributes:NULL error:&error])
++				if (![fileManager XP_createDirectoryAtPath:profilePath withIntermediateDirectories:YES attributes:NULL error:&error])
+ 				{
+ 					NSLog(@"Cannot create profile folder %@: %@", profilePath, error);
+ 					[error release];
+@@ -269,10 +269,10 @@
+ 	NSData * defaultArticleListFont = [NSArchiver archivedDataWithRootObject:[NSFont fontWithName:@"LucidaGrande" size:11.0]];
+ 	NSData * defaultFolderFont = [NSArchiver archivedDataWithRootObject:[NSFont fontWithName:@"LucidaGrande" size:11.0]];
+ 	NSData * defaultArticleSortDescriptors = [NSArchiver archivedDataWithRootObject:[NSArray array]];
+-	
++
+ 	NSNumber * boolNo = [NSNumber numberWithBool:NO];
+ 	NSNumber * boolYes = [NSNumber numberWithBool:YES];
+-	
++
+ 	[defaultValues setObject:[MA_ApplicationSupportFolder stringByAppendingPathComponent:MA_Database_Name] forKey:MAPref_DefaultDatabase];
+ 	[defaultValues setObject:boolNo forKey:MAPref_CheckForUpdatedArticles];
+ 	[defaultValues setObject:boolYes forKey:MAPref_ShowUnreadArticlesInBold];
+@@ -281,13 +281,13 @@
+ 	[defaultValues setObject:boolYes forKey:MAPref_CheckForNewArticlesOnStartup];
+ 	[defaultValues setObject:[NSNumber numberWithInt:1] forKey:MAPref_CachedFolderID];
+ 	[defaultValues setObject:MA_Field_Date forKey:MAPref_SortColumn];
+-	[defaultValues setObject:[NSNumber numberWithInteger:MA_Default_Check_Frequency] forKey:MAPref_CheckFrequency];
++	[defaultValues setObject:[NSNumber XP_numberWithInteger:MA_Default_Check_Frequency] forKey:MAPref_CheckFrequency];
+ 	[defaultValues setObject:[NSNumber numberWithFloat:MA_Default_Read_Interval] forKey:MAPref_MarkReadInterval];
+ 	[defaultValues setObject:[NSNumber numberWithInt:MA_Default_RefreshThreads] forKey:MAPref_RefreshThreads];
+ 	[defaultValues setObject:[NSArray arrayWithObjects:nil] forKey:MAPref_ArticleListColumns];
+ 	[defaultValues setObject:MA_DefaultStyleName forKey:MAPref_ActiveStyleName];
+ 	[defaultValues setObject:[NSNumber numberWithFloat:1.0] forKey:MAPref_ActiveTextSizeMultiplier];
+-	[defaultValues setObject:[NSNumber numberWithInteger:MA_Default_BackTrackQueueSize] forKey:MAPref_BacktrackQueueSize];
++	[defaultValues setObject:[NSNumber XP_numberWithInteger:MA_Default_BackTrackQueueSize] forKey:MAPref_BacktrackQueueSize];
+ 	[defaultValues setObject:[NSNumber numberWithInt:MA_FolderSort_ByName] forKey:MAPref_AutoSortFoldersTree];
+ 	[defaultValues setObject:boolYes forKey:MAPref_ShowFolderImages];
+ 	[defaultValues setObject:boolYes forKey:MAPref_UseJavaScript];
+@@ -300,8 +300,8 @@
+ 	[defaultValues setObject:boolNo forKey:MAPref_NewFolderUI];
+ 	[defaultValues setObject:boolNo forKey:MAPref_UseMinimumFontSize];
+ 	[defaultValues setObject:[NSNumber numberWithInt:MA_Filter_All] forKey:MAPref_FilterMode];
+-	[defaultValues setObject:[NSNumber numberWithInteger:MA_Default_MinimumFontSize] forKey:MAPref_MinimumFontSize];
+-	[defaultValues setObject:[NSNumber numberWithInteger:MA_Default_AutoExpireDuration] forKey:MAPref_AutoExpireDuration];
++	[defaultValues setObject:[NSNumber XP_numberWithInteger:MA_Default_MinimumFontSize] forKey:MAPref_MinimumFontSize];
++	[defaultValues setObject:[NSNumber XP_numberWithInteger:MA_Default_AutoExpireDuration] forKey:MAPref_AutoExpireDuration];
+ 	[defaultValues setObject:MA_DefaultDownloadsFolder forKey:MAPref_DownloadsFolder];
+ 	[defaultValues setObject:defaultArticleSortDescriptors forKey:MAPref_ArticleSortDescriptors];
+ 	[defaultValues setObject:[NSDate distantPast] forKey:MAPref_LastRefreshDate];
+@@ -313,11 +313,11 @@
+ 	[defaultValues setObject:boolYes forKey:MAPref_ShouldSaveFeedSource];
+ 	[defaultValues setObject:boolNo forKey:MAPref_ShouldSaveFeedSourceBackup];
+ 	[defaultValues setObject:[NSKeyedArchiver archivedDataWithRootObject:[SearchMethod searchAllArticlesMethod]] forKey:MAPref_SearchMethod];
+-    [defaultValues setObject:[NSNumber numberWithInteger:MA_Default_ConcurrentDownloads] forKey:MAPref_ConcurrentDownloads];
++    [defaultValues setObject:[NSNumber XP_numberWithInteger:MA_Default_ConcurrentDownloads] forKey:MAPref_ConcurrentDownloads];
+     [defaultValues setObject:boolNo forKey:MAPref_SyncGoogleReader];
+     [defaultValues setObject:boolNo forKey:MAPref_GoogleNewSubscription];
+     [defaultValues setObject:boolNo forKey:MAPref_AlwaysAcceptBetas];
+-	
++
+ 	return defaultValues;
  }
  
- -(void)createFeedSourcesFolderIfNecessary
--{	
-+{
- 	BOOL isDirectory = NO;
+@@ -348,7 +348,7 @@
+  */
+ -(void)setInteger:(NSInteger)value forKey:(NSString *)defaultName
+ {
+-	[userPrefs setObject:[NSNumber numberWithInteger:value] forKey:defaultName];
++	[userPrefs setObject:[NSNumber XP_numberWithInteger:value] forKey:defaultName];
+ }
+ 
+ /* setString
+@@ -388,7 +388,7 @@
+  */
+ -(NSInteger)integerForKey:(NSString *)defaultName
+ {
+-	return [[userPrefs valueForKey:defaultName] integerValue];
++	return [[userPrefs valueForKey:defaultName] XP_integerValue];
+ }
+ 
+ /* stringForKey
+@@ -1196,7 +1196,7 @@
  	if (![[NSFileManager defaultManager] fileExistsAtPath:feedSourcesFolder isDirectory:&isDirectory])
  	{
  		NSError * error = nil;
@@ -23,49 +99,3 @@
  		{
  			NSLog(@"Could not create feed sources folder at path '%@'. Error: %@", feedSourcesFolder, [error localizedDescription]);
  		}
-@@ -1051,4 +1050,45 @@
- 	}
- }
- 
-+/* syncGoogleReader
-+ * Returns whether Open Reader sync is enabled.
-+ */
-+-(BOOL)syncGoogleReader
-+{
-+	return [self boolForKey:@"SyncGoogleReader"];
-+}
-+
-+-(void)setSyncGoogleReader:(BOOL)flag
-+{
-+	[self setBool:flag forKey:@"SyncGoogleReader"];
-+}
-+
-+/* syncServer
-+ * Returns the Open Reader server hostname.
-+ */
-+-(NSString *)syncServer
-+{
-+	NSString * server = [self stringForKey:@"SyncServer"];
-+	return server ? server : @"";
-+}
-+
-+-(void)setSyncServer:(NSString *)newServer
-+{
-+	[self setString:newServer forKey:@"SyncServer"];
-+}
-+
-+/* syncingUser
-+ * Returns the Open Reader account username.
-+ */
-+-(NSString *)syncingUser
-+{
-+	NSString * user = [self stringForKey:@"SyncingUser"];
-+	return user ? user : @"";
-+}
-+
-+-(void)setSyncingUser:(NSString *)newUser
-+{
-+	[self setString:newUser forKey:@"SyncingUser"];
-+}
-+
- @end

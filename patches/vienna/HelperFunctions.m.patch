@@ -1,50 +1,37 @@
---- vienna/HelperFunctions.m	2026-04-07 10:53:55.844962482 +0000
-+++ vienna/HelperFunctions.m	2026-04-07 11:10:03.262045798 +0000
-@@ -17,7 +17,6 @@
- //  See the License for the specific language governing permissions and
- // 
- 
--#import "HelperFunctions.h"
- #import <SystemConfiguration/SCNetworkReachability.h>
- #import <Carbon/Carbon.h>
- #import <WebKit/WebKit.h>
-@@ -48,7 +47,7 @@
-  */
- NSString * getDefaultBrowser(void)
+--- vienna/HelperFunctions.m
++++ vienna/HelperFunctions.m
+@@ -105,13 +105,9 @@
+  */ 
+ NSString * percentEscape(NSString *string)
  {
--	NSURL * testURL = [NSURL URLWithString:@"http://example.net"];
-+	NSURL * testURL = [NSURL XP_URLWithString:@"http://example.net"];
- 	NSString * registeredAppURL = nil;
- 	CFURLRef appURL = nil;
+-	return CFBridgingRelease(CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault, (CFStringRef)string, NULL,
+-												   
+-												   // RFC2368 says all URL reserved characters must be encoded
+-												   // these are all the reserved characters from RFC3986
+-												   CFSTR("/:?#[]@!$&'()*+,;="),	
+-												   
+-												   kCFStringEncodingUTF8));
++	return [(NSString *)CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault, (CFStringRef)string, NULL,
++								CFSTR("/:?#[]@!$&'()*+,;="),
++								kCFStringEncodingUTF8) autorelease];
+ }
  
-@@ -172,11 +171,12 @@
- 	{
- 		if (validExtensions)
- 			arrayOfFiles = [arrayOfFiles pathsMatchingExtensions:validExtensions];
--		
--		for (NSString * fileName in arrayOfFiles)
-+
-+		NSEnumerator * enum_fileName = [arrayOfFiles objectEnumerator];
-+		NSString * fileName;
-+		while ((fileName = [enum_fileName nextObject]))
- 		{
--			NSString * fullPath = [path stringByAppendingPathComponent:fileName];
--			BOOL isDirectory;
-+			NSString * fullPath = [path stringByAppendingPathComponent:fileName];			BOOL isDirectory;
- 			
- 			if ([fileManager fileExistsAtPath:fullPath isDirectory:&isDirectory] && (isDirectory == foldersOnly))
- 			{
-@@ -195,7 +195,7 @@
+ /* cleanedUpAndEscapedUrlFromString
+@@ -195,7 +191,7 @@
  BOOL isAccessible(NSString * urlString)
  {
- 	SCNetworkConnectionFlags flags;
--	NSURL * url = [NSURL URLWithString:urlString];
-+	NSURL * url = [NSURL XP_URLWithString:urlString];
+ 	SCNetworkReachabilityRef   target;
+-	SCNetworkReachabilityFlags flags = 0;
++	SCNetworkConnectionFlags flags = 0;
+ 	Boolean                   ok;
  	
- 	if (!SCNetworkCheckReachabilityByName([[url host] UTF8String], &flags))
- 		return NO;
-@@ -301,3 +301,4 @@
- 		err = AHGotoPage(myBookName, pagePath, anchorName);
- 	return err;
- }
-+
+ 	NSURL * url = [NSURL URLWithString:urlString];
+@@ -208,7 +204,7 @@
+ 
+         if (!ok)
+             return NO;
+-        return (flags & kSCNetworkReachabilityFlagsReachable) && !(flags & kSCNetworkReachabilityFlagsConnectionRequired);
++        return (flags & kSCNetworkFlagsReachable) && !(flags & kSCNetworkFlagsConnectionRequired);
+     }
+     else
+         return NO;

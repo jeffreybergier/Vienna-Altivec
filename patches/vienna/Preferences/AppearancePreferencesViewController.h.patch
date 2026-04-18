@@ -1,0 +1,11 @@
+--- vienna/Preferences/AppearancePreferencesViewController.h
++++ vienna/Preferences/AppearancePreferencesViewController.h
+@@ -20,7 +20,7 @@
+ 
+ #import "MASPreferencesViewController.h"
+ 
+-@interface AppearancePreferencesViewController : NSViewController <MASPreferencesViewController> {
++@interface AppearancePreferencesViewController : XPViewController <MASPreferencesViewController> {
+     IBOutlet NSTextField * articleFontSample;
+     IBOutlet NSTextField * folderFontSample;
+     IBOutlet NSButton * articleFontSelectButton;

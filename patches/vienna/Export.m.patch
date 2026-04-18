@@ -1,17 +1,54 @@
---- vienna/Export.m	2026-04-05 14:14:13.772586120 +0000
-+++ vienna/Export.m	2026-04-06 21:48:20.034664415 +0000
-@@ -96,10 +96,11 @@
- {
- 	int countExported = 0;
+--- vienna/Export.m
++++ vienna/Export.m
+@@ -53,30 +53,29 @@
  
--	for (Folder * folder in feedArray)
-+	NSEnumerator * enum_folder = [feedArray objectEnumerator];
-+	Folder * folder;
-+	while ((folder = [enum_folder nextObject]))
- 	{
--		NSMutableDictionary * itemDict = [NSMutableDictionary dictionary];
--		NSString * name = [folder name];
-+		NSMutableDictionary * itemDict = [NSMutableDictionary dictionary];		NSString * name = [folder name];
- 		if (IsGroupFolder(folder))
- 		{
- 			NSArray * subFolders = [db arrayOfFolders:[folder itemId]];
+ 	[panel setAccessoryView:exportSaveAccessory];
+ 	[panel setAllowedFileTypes:[NSArray arrayWithObject:@"opml"]];
+-	[panel beginSheetModalForWindow:mainWindow completionHandler:^(NSInteger returnCode) {
+-		if (returnCode == NSOKButton)
+-		{
+-			[panel orderOut:self];
++	NSInteger returnCode = [panel runModal];
++	if (returnCode == NSOKButton)
++	{
++		[panel orderOut:self];
++
++		NSArray * foldersArray = ([exportSelected state] == NSOnState) ? [foldersTree selectedFolders] : [db arrayOfFolders:MA_Root_Folder];
++		int countExported = [self exportToFile:[[panel URL] path] from:foldersArray withGroups:([exportWithGroups state] == NSOnState)];
+ 
+-			NSArray * foldersArray = ([exportSelected state] == NSOnState) ? [foldersTree selectedFolders] : [db arrayOfFolders:MA_Root_Folder];
+-			int countExported = [self exportToFile:[[panel URL] path] from:foldersArray withGroups:([exportWithGroups state] == NSOnState)];
+-		
+-			if (countExported < 0)
+-			{
+-				NSBeginCriticalAlertSheet(NSLocalizedString(@"Cannot open export file message", nil),
+-										  NSLocalizedString(@"OK", nil),
+-										  nil,
+-										  nil, [NSApp mainWindow], self,
+-										  nil, nil, nil,
+-										  NSLocalizedString(@"Cannot open export file message text", nil));
+-			}
+-			else
+-			{
+-				// Announce how many we successfully imported
+-				NSRunAlertPanel(NSLocalizedString(@"RSS Subscription Export Title", nil), NSLocalizedString(@"%d subscriptions successfully exported", nil), NSLocalizedString(@"OK", nil), nil, nil, countExported);
+-			}
++		if (countExported < 0)
++		{
++			NSBeginCriticalAlertSheet(NSLocalizedString(@"Cannot open export file message", nil),
++									  NSLocalizedString(@"OK", nil),
++									  nil,
++									  nil, [NSApp mainWindow], self,
++									  nil, nil, nil,
++									  NSLocalizedString(@"Cannot open export file message text", nil));
++		}
++		else
++		{
++			// Announce how many we successfully imported
++			NSRunAlertPanel(NSLocalizedString(@"RSS Subscription Export Title", nil), NSLocalizedString(@"%d subscriptions successfully exported", nil), NSLocalizedString(@"OK", nil), nil, nil, countExported);
+ 		}
+-	}];
++	}
+ }
+ 
+ /* exportSubscriptionGroup

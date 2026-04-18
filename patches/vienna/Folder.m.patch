@@ -1,12 +1,24 @@
---- vienna/Folder.m	2026-04-07 10:53:55.842035095 +0000
-+++ vienna/Folder.m	2026-04-07 11:10:03.109465542 +0000
-@@ -167,7 +167,8 @@
+--- vienna/Folder.m
++++ vienna/Folder.m
+@@ -144,7 +144,7 @@
+ 		imagesCacheFolder = [[Preferences standardPreferences] imagesFolder];
+ 		if (![fileManager fileExistsAtPath:imagesCacheFolder isDirectory:&isDir])
  		{
- 			NSString * fileName;
- 			
--			for (fileName in listOfFiles)
-+			NSEnumerator * enum_files = [listOfFiles objectEnumerator];
-+			while ((fileName = [enum_files nextObject]))
+-			if (![fileManager createDirectoryAtPath:imagesCacheFolder withIntermediateDirectories:YES attributes:nil error:nil])
++			if (![fileManager XP_createDirectoryAtPath:imagesCacheFolder withIntermediateDirectories:YES attributes:nil error:nil])
  			{
- 				if ([[fileName pathExtension] isEqualToString:@"tiff"])
- 				{
+ 				NSLog(@"Cannot create image cache at %@. Will not cache folder images in this session.", imagesCacheFolder);
+ 				imagesCacheFolder = nil;
+@@ -690,10 +690,10 @@
+  */
+ -(void)clearCache
+ {
+-@autoreleasepool {
++NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+ 		[cachedArticles removeAllObjects];
+ 		isCached = NO;
+-	}
++[pool drain];
+ }
+ 
+ /* addArticleToCache

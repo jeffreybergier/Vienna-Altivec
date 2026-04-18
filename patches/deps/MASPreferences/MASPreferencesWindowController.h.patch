@@ -1,0 +1,23 @@
+--- MASPreferencesWindowController.h
++++ MASPreferencesWindowController.h
+@@ -11,19 +11,14 @@
+ 
+ extern NSString *const kMASPreferencesWindowControllerDidChangeViewNotification;
+ 
+-__attribute__((__visibility__("default")))
+-#if MAC_OS_X_VERSION_MAX_ALLOWED > MAC_OS_X_VERSION_10_5
+-@interface MASPreferencesWindowController : NSWindowController <NSToolbarDelegate, NSWindowDelegate>
+-#else
+ @interface MASPreferencesWindowController : NSWindowController
+-#endif
+ {
+ @private
+     NSMutableArray *_viewControllers;
+     NSMutableDictionary *_minimumViewRects;
+     NSString *_title;
+     NSViewController <MASPreferencesViewController> *_selectedViewController;
+-    NSToolbar * __unsafe_unretained _toolbar;
++    NSToolbar *_toolbar;
+ }
+ 
+ @property (nonatomic, readonly) NSMutableArray *viewControllers;

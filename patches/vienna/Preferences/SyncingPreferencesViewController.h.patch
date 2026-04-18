@@ -1,0 +1,11 @@
+--- vienna/Preferences/SyncingPreferencesViewController.h
++++ vienna/Preferences/SyncingPreferencesViewController.h
+@@ -20,7 +20,7 @@
+ 
+ #import "MASPreferencesViewController.h"
+ 
+-@interface SyncingPreferencesViewController : NSViewController <MASPreferencesViewController, NSTextFieldDelegate> {
++@interface SyncingPreferencesViewController : XPViewController <MASPreferencesViewController, NSTextFieldDelegate> {
+     IBOutlet NSPopUpButton * openReaderSource; //List of known service providers
+     NSDictionary * sourcesDict;
+     IBOutlet NSTextField * credentialsInfoText;

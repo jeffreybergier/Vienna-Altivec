@@ -1,0 +1,11 @@
+--- vienna/Preferences/AdvancedPreferencesViewController.h
++++ vienna/Preferences/AdvancedPreferencesViewController.h
+@@ -20,7 +20,7 @@
+ 
+ #import "MASPreferencesViewController.h"
+ 
+-@interface AdvancedPreferencesViewController : NSViewController <MASPreferencesViewController> {
++@interface AdvancedPreferencesViewController : XPViewController <MASPreferencesViewController> {
+     IBOutlet NSButton * useJavaScriptButton;
+     IBOutlet NSPopUpButton * concurrentDownloads;
+     IBOutlet NSButton *useWebPluginsButton;
