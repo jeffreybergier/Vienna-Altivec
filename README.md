@@ -42,6 +42,7 @@ to allow easy cross-compiling for Mac OS X Tiger.
 - [ ] Investigate beachball on sync
 - [ ] Convert nib files to code
 - [ ] Add x86_64 and arm64 builds
+- [ ] Create release builds with Github Actions
 
 ## For Developers
 
@@ -62,9 +63,9 @@ altivec/           toolchain submodule (osxcross, libcurl, deploy script)
 
 ### Prerequisites
 
-You do **not** need a Mac. The build runs inside a Docker container that
-ships a full [osxcross](https://github.com/tpoechtrager/osxcross) toolchain
-targeting the 10.5 SDK with a 10.4 deployment target.
+You do **not** need a Mac. The build system is [Altivec Intelligence](https://github.com/jeffreybergier/AltivecIntelligence) 
+which distributes a preconfigured Docker container with the [osxcross](https://github.com/tpoechtrager/osxcross) 
+toolchain targeting the 10.5 SDK with a 10.4 deployment target.
 
 - Docker + Docker Compose
 - `git` with submodule support
